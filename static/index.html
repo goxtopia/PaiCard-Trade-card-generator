@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Card Generator</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="main-container">
+        <div class="sidebar">
+            <h1 class="app-title">AI Card Generator</h1>
+            
+            <div class="panel">
+                <h3>1. Upload Image</h3>
+                <div class="upload-area" id="uploadArea">
+                    <p>Click or Drag Image Here</p>
+                    <input type="file" id="imageInput" accept="image/*" style="display: none;" aria-label="Upload Image">
+                </div>
+                <button id="generateBtn" class="btn primary-btn" disabled>Summon Card</button>
+            </div>
+
+            <div class="panel">
+                <h3>2. Customize</h3>
+                <label>Card Back:</label>
+                <div id="cardBackList" class="card-back-grid">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>3. Library</h3>
+                <button id="openLibraryBtn" class="btn secondary-btn">View Card Library</button>
+            </div>
+            
+            <div class="panel instructions">
+                <p>Upload an image and let the AI analyze its essence to forge a unique card!</p>
+                <p class="status-text" id="statusText">Ready.</p>
+            </div>
+        </div>
+
+        <div class="display-area">
+            <div class="scene">
+                <div class="card" id="cardElement">
+                    <!-- Front Face -->
+                    <div class="card-face card-front" id="cardFront">
+                        <!-- Rarity Visual Effects Container -->
+                        <div class="rarity-overlay" id="rarityOverlay"></div>
+                        
+                        <!-- Card Content -->
+                        <div class="card-frame-content">
+                            <div class="card-top-header">
+                                <div class="card-name-box">
+                                    <span id="cardName">Unknown Entity</span>
+                                </div>
+                                <div class="card-attribute-box" id="cardRarityContainer">
+                                    <span id="cardRarity">N</span>
+                                </div>
+                            </div>
+                            
+                            <div class="card-image-wrapper">
+                                <div id="cardImage" class="card-art-div" draggable="false"></div>
+                            </div>
+                            
+                            <div class="card-info-box">
+                                <div class="card-type">[ AI / Effect ]</div>
+                                <div class="card-desc-text" id="cardDescription">
+                                    A mysterious card waiting to be revealed. Upload an image to generate its power.
+                                </div>
+                                <div class="card-stats">
+                                    <span>ATK / <span id="cardAtk">?</span></span>
+                                    <span>DEF / <span id="cardDef">?</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Back Face -->
+                    <div class="card-face card-back">
+                        <img id="cardBackImage" src="/static/card_backs/default.svg" alt="Card Back">
+                    </div>
+                    
+                    <!-- Edges (Thickness) -->
+                    <div class="card-edge card-edge-right"></div>
+                    <div class="card-edge card-edge-left"></div>
+                    <div class="card-edge card-edge-top"></div>
+                    <div class="card-edge card-edge-bottom"></div>
+                </div>
+            </div>
+            
+            <div class="controls-area">
+                <button id="regenerateBtn" class="btn secondary-btn" style="display: none;">Regenerate</button>
+                <button id="downloadBtn" class="btn secondary-btn" style="margin-left: 10px;">Download Image</button>
+            </div>
+        </div>
+    </div>
+    <div id="libraryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Card Library</h2>
+                <span class="close-modal" id="closeLibraryBtn">&times;</span>
+            </div>
+            <div id="cardLibraryGrid" class="card-library-grid">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/html2canvas.min.js"></script>
+    <script src="/static/js/script.js"></script>
+</body>
+</html>
