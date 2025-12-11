@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Summon - AI Card Generator</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body class="scrollable">
+    <div class="batch-container">
+        <a href="/" class="back-link">&larr; Back to Single Summon</a>
+
+        <h1 class="app-title">Batch Summon</h1>
+
+        <div class="batch-controls">
+            <h3>1. Select Card Back (Applied to all)</h3>
+            <div id="cardBackList" class="card-back-selector">
+                <!-- Injected via JS -->
+            </div>
+
+            <h3>2. Upload Images (Max 10)</h3>
+            <input type="file" id="filesInput" accept="image/*" multiple>
+            <br>
+            <p id="fileCount">0 files selected</p>
+            <br>
+            <button id="batchGenerateBtn" class="btn primary-btn" disabled>Summon All</button>
+            <p id="statusText" class="status-text">Ready.</p>
+        </div>
+
+        <div id="batchGrid" class="batch-grid">
+            <!-- Cards will appear here -->
+        </div>
+    </div>
+
+    <script src="/static/js/batch.js"></script>
+</body>
+</html>
