@@ -22,9 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const openLibraryBtn = document.getElementById('openLibraryBtn');
     const closeLibraryBtn = document.getElementById('closeLibraryBtn');
     const libraryModal = document.getElementById('libraryModal');
+    const librarySort = document.getElementById('librarySort');
 
     let currentFile = null;
     let currentCardData = null; // Store current card data for regenerate logic
+    let cachedLibraryCards = []; // Store fetched cards for sorting
 
     // Load Card Backs
     fetch('/api/card-backs')
@@ -77,7 +79,24 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Create Front Face (similar structure to index.html)
         const cardFront = document.createElement('div');
-        cardFront.className = `card-front rarity-${data.rarity.toLowerCase()}`;
+        // Ensure rarity class is applied to card-front for coloring (e.g., rarity-ssr)
+        cardFront.className = `card-front`;
+
+        // Add specific rarity styling to a parent wrapper or the face itself?
+        // In style.css: .rarity-ur .card-front { ... }
+        // The main card uses: <div class="card rarity-ur"><div class="card-front">...</div></div>
+        // So we need to apply the rarity class to a parent of card-front OR adjust CSS.
+        // But wait, style.css has: .rarity-ur .card-front.
+        // In the main view, 'rarity-ur' is on #cardElement (the .card div).
+        // Here 'container' is acting as the card scaler, but it doesn't have .card class styling (width/height).
+        // Let's add the rarity class to the 'container' which wraps 'cardFront'.
+        // But 'mini-card-container' is just a wrapper for scaling.
+        // Let's create a 'card' div inside container.
+
+        const cardDiv = document.createElement('div');
+        cardDiv.className = `card rarity-${data.rarity.toLowerCase()}`;
+        cardDiv.style.width = '100%';
+        cardDiv.style.height = '100%';
         
         // Content
         const frameContent = document.createElement('div');
@@ -122,7 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
         overlay.className = 'rarity-overlay';
         cardFront.appendChild(overlay);
 
-        container.appendChild(cardFront);
+        cardDiv.appendChild(cardFront);
+        container.appendChild(cardDiv);
         wrapper.appendChild(container);
         
         return wrapper;
@@ -133,14 +153,40 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/api/cards')
             .then(res => res.json())
             .then(cards => {
-                cardLibraryGrid.innerHTML = '';
-                cards.forEach(card => {
-                    const miniCard = createMiniCardDOM(card);
-                    miniCard.onclick = () => loadCardToView(card);
-                    cardLibraryGrid.appendChild(miniCard);
-                });
+                cachedLibraryCards = cards;
+                renderLibrary();
             });
     }
+
+    function renderLibrary() {
+        cardLibraryGrid.innerHTML = '';
+
+        // Sort cards
+        const sortValue = librarySort.value;
+        const rarityOrder = { "UR": 5, "SSR": 4, "SR": 3, "R": 2, "N": 1 };
+
+        cachedLibraryCards.sort((a, b) => {
+            if (sortValue === 'date-desc') {
+                return (b.created_at || 0) - (a.created_at || 0);
+            } else if (sortValue === 'date-asc') {
+                return (a.created_at || 0) - (b.created_at || 0);
+            } else if (sortValue === 'rarity-desc') {
+                return (rarityOrder[b.rarity] || 0) - (rarityOrder[a.rarity] || 0);
+            } else if (sortValue === 'rarity-asc') {
+                return (rarityOrder[a.rarity] || 0) - (rarityOrder[b.rarity] || 0);
+            }
+            return 0;
+        });
+
+        cachedLibraryCards.forEach(card => {
+            const miniCard = createMiniCardDOM(card);
+            miniCard.onclick = () => loadCardToView(card);
+            cardLibraryGrid.appendChild(miniCard);
+        });
+    }
+
+    librarySort.addEventListener('change', renderLibrary);
+
     // Initial load
     loadLibrary();
 

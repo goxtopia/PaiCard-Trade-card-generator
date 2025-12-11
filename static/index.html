@@ -103,6 +103,15 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h2>Card Library</h2>
+                <div class="library-controls">
+                    <label>Sort by:</label>
+                    <select id="librarySort">
+                        <option value="date-desc">Date (Newest)</option>
+                        <option value="date-asc">Date (Oldest)</option>
+                        <option value="rarity-desc">Rarity (High to Low)</option>
+                        <option value="rarity-asc">Rarity (Low to High)</option>
+                    </select>
+                </div>
                 <span class="close-modal" id="closeLibraryBtn">&times;</span>
             </div>
             <div id="cardLibraryGrid" class="card-library-grid">

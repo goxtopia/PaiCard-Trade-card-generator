@@ -86,6 +86,7 @@ def process_single_file_generation(file_path, file_md5, card_back, existing_card
 
     filename = os.path.basename(file_path)
 
+    import time
     new_card = {
         "md5": file_md5,
         "filename": filename,
@@ -95,7 +96,8 @@ def process_single_file_generation(file_path, file_md5, card_back, existing_card
         "description": analysis["description"],
         "atk": analysis.get("atk", "0"),
         "def": analysis.get("def", "0"),
-        "card_back": card_back
+        "card_back": card_back,
+        "created_at": int(time.time())
     }
 
     # Preserve existing card_back if not provided
