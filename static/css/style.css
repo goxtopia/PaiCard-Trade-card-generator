@@ -719,3 +719,8 @@ img {
     margin: 10px 0;
     flex-wrap: wrap;
 }
+
+.card-back-selector .card-back-option {
+    width: 60px; /* Explicit width for flex items */
+    height: 90px;
+}
