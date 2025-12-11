@@ -277,6 +277,21 @@ body.scrollable {
     padding-bottom: 10px;
 }
 
+.library-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #ecf0f1;
+}
+
+.library-controls select {
+    background: #34495e;
+    color: #ecf0f1;
+    border: 1px solid #7f8c8d;
+    padding: 5px;
+    border-radius: 4px;
+}
+
 .close-modal {
     color: #ecf0f1;
     font-size: 28px;
