@@ -85,16 +85,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const div = document.createElement('div');
             div.className = `pack-item ${pack.status}`;
 
-            let statusLabel = pack.status === 'processing' ? 'Processing...' : (pack.status === 'opened' ? 'Opened' : 'Ready to Open');
+            let statusLabel = pack.status === 'processing' ? 'Processing...' : 'Ready to Open';
             if (pack.status === 'ready') div.classList.add('ready');
 
             div.innerHTML = `
                 <div class="pack-label">Card Pack</div>
                 <div class="pack-status">${statusLabel}</div>
-                <div class="pack-status" style="font-size: 0.8em; margin-top: 5px;">${pack.cards.length} Cards</div>
+                <div class="pack-status" style="font-size: 0.8em; margin-top: 5px;">Contains ${pack.cards.length} Cards</div>
             `;
 
-            if (pack.status === 'ready' || pack.status === 'opened') {
+            if (pack.status === 'ready') {
                 div.onclick = () => openPack(pack.id);
             }
 
