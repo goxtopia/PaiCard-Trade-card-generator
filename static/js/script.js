@@ -156,6 +156,18 @@ document.addEventListener('DOMContentLoaded', () => {
         cardDef.textContent = data.def || "?";
         cardImage.style.backgroundImage = `url(${data.image_url})`;
         
+        // Use bounded card back if available
+        if (data.card_back) {
+            cardBackImage.src = data.card_back;
+            // Also update the selection in the sidebar to reflect this
+             document.querySelectorAll('.card-back-option').forEach(el => {
+                if (el.style.backgroundImage.includes(data.card_back)) {
+                    document.querySelectorAll('.card-back-option').forEach(e => e.classList.remove('selected'));
+                    el.classList.add('selected');
+                }
+             });
+        }
+
         // Adjust description font size if needed
         adjustDescriptionSize(cardDescription);
 
@@ -221,6 +233,16 @@ document.addEventListener('DOMContentLoaded', () => {
         generateBtn.disabled = true;
         regenerateBtn.disabled = true;
         statusText.textContent = "Summoning card...";
+
+        // Append selected card back
+        const selectedCardBack = document.querySelector('.card-back-option.selected');
+        if (selectedCardBack) {
+            // Extract URL from style
+            const style = selectedCardBack.style.backgroundImage;
+            // url("...") -> ...
+            const url = style.slice(5, -2);
+            formData.append('card_back', url);
+        }
 
         try {
             const response = await fetch('/api/generate', {

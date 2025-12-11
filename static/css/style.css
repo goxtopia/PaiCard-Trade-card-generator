@@ -18,6 +18,11 @@ body {
     overflow: hidden;
 }
 
+body.scrollable {
+    height: auto;
+    overflow-y: auto;
+}
+
 .main-container {
     display: flex;
     height: 100%;
@@ -609,4 +614,108 @@ img {
         transform: scale(1) rotateY(0deg);
         filter: brightness(1) blur(0);
     }
+}
+
+
+/* Batch Page Styles */
+.batch-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.batch-controls {
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #444;
+    padding: 20px;
+    border-radius: 8px;
+    width: 100%;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.batch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 30px;
+    width: 100%;
+    justify-items: center;
+}
+
+.batch-card-wrapper {
+    width: 250px; /* Scaled down from main card size */
+    height: 364px; /* Aspect ratio roughly */
+    perspective: 1000px;
+    cursor: pointer;
+}
+
+/* Reusing card styles but ensuring they work in grid */
+.batch-card-wrapper .card {
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+    position: relative;
+}
+
+.batch-card-wrapper .card.is-flipped {
+    transform: rotateY(180deg);
+}
+
+.batch-card-wrapper .card-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+}
+
+.batch-card-wrapper .card-front {
+    transform: rotateY(0deg);
+    background: #1a1a1a;
+    /* Re-scale internal elements */
+    font-size: 10px; /* Base font size scaling */
+}
+
+/* Adjust internal font sizes for smaller cards */
+.batch-card-wrapper .card-name-box { font-size: 1.2em; }
+.batch-card-wrapper .card-attribute-box { font-size: 1.2em; width: 2.5em; height: 2.5em; line-height: 2.5em; }
+.batch-card-wrapper .card-desc-text { font-size: 0.9em; line-height: 1.2; }
+.batch-card-wrapper .card-stats { font-size: 1em; }
+.batch-card-wrapper .card-type { font-size: 0.9em; margin-bottom: 2px; }
+
+.batch-card-wrapper .card-back {
+    transform: rotateY(180deg);
+}
+
+.batch-card-wrapper .card-back img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+}
+
+#filesInput {
+    margin: 10px 0;
+}
+
+.back-link {
+    color: #ccc;
+    text-decoration: none;
+    margin-bottom: 20px;
+    align-self: flex-start;
+}
+.back-link:hover { text-decoration: underline; color: #fff; }
+
+.card-back-selector {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 10px 0;
+    flex-wrap: wrap;
 }
