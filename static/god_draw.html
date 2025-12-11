@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Batch Summon - AI Card Generator</title>
+    <title>God's Draw - AI Card Generator</title>
     <link rel="stylesheet" href="/static/css/style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,24 +14,16 @@
         <div class="header-nav">
              <a href="/" class="back-link">&larr; Single</a>
              <span style="margin: 0 10px; color: #555;">|</span>
-             <a href="/god-draw" class="back-link">God's Draw</a>
+             <a href="/batch" class="back-link">Batch</a>
         </div>
 
-        <h1 class="app-title">Batch Summon</h1>
+        <h1 class="app-title">God's Draw</h1>
 
         <div class="batch-controls">
-            <h3>1. Select Card Back (Applied to all)</h3>
-            <div id="cardBackList" class="card-back-selector">
-                <!-- Injected via JS -->
-            </div>
-
-            <h3>2. Upload Images (Max 10)</h3>
-            <input type="file" id="filesInput" accept="image/*" multiple>
+            <p>Summon 5-10 random cards from the multiverse!</p>
             <br>
-            <p id="fileCount">0 files selected</p>
-            <br>
-            <button id="batchGenerateBtn" class="btn primary-btn" disabled>Summon All</button>
-            <p id="statusText" class="status-text">Ready.</p>
+            <button id="drawBtn" class="btn primary-btn">SUMMON NOW</button>
+            <p id="statusText" class="status-text">Ready to draw.</p>
         </div>
 
         <div id="batchGrid" class="batch-grid">
@@ -39,6 +31,6 @@
         </div>
     </div>
 
-    <script src="/static/js/batch.js"></script>
+    <script src="/static/js/god_draw.js"></script>
 </body>
 </html>

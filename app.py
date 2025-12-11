@@ -9,6 +9,7 @@ import uuid
 import hashlib
 import json
 import random
+import requests
 from typing import Optional, List
 from vlm import VLMService
 
@@ -60,6 +61,14 @@ def calculate_md5(file_path):
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
+
+def get_available_card_backs():
+    files = []
+    if os.path.exists(CARD_BACKS_DIR):
+        for f in os.listdir(CARD_BACKS_DIR):
+            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.svg')):
+                files.append(f"/static/card_backs/{f}")
+    return files
 
 # Initialize VLM Service
 API_BASE = os.getenv("VLM_API_BASE", "http://192.168.124.22:8080")
@@ -228,6 +237,91 @@ async def batch_generate_card(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/god-draw")
+async def god_draw_card():
+    try:
+        cards = load_cards()
+        generated_cards = []
+        available_card_backs = get_available_card_backs()
+
+        # Determine number of cards to draw (5-10)
+        num_draws = random.randint(5, 10)
+
+        for _ in range(num_draws):
+            # Fetch random image from API
+            try:
+                # The API returns one image at a time
+                resp = requests.get("https://api.tcslw.cn/api/img/tbmjx?type=json", timeout=10)
+                if resp.status_code != 200:
+                    continue
+                data = resp.json()
+                image_url = data.get("image_url")
+                if not image_url:
+                    continue
+
+                # Download the image
+                img_resp = requests.get(image_url, timeout=10)
+                if img_resp.status_code != 200:
+                    continue
+
+                image_content = img_resp.content
+
+                # Save temporarily to calculate MD5
+                temp_filename = f"temp_{uuid.uuid4()}"
+                temp_path = os.path.join(UPLOAD_DIR, temp_filename)
+
+                with open(temp_path, "wb") as f:
+                    f.write(image_content)
+
+                file_md5 = calculate_md5(temp_path)
+
+                # Pick a random card back
+                random_card_back = random.choice(available_card_backs) if available_card_backs else None
+
+                # Check if exists
+                if file_md5 in cards:
+                    os.remove(temp_path)
+                    card = cards[file_md5]
+                    # For god draw, maybe we force the random back for visual effect?
+                    # Or just use the existing one? The requirement says "randomly choose card back".
+                    # If we want to persist this random choice for this session, we can return it modified
+                    # without saving, OR update the binding. Updating binding is safer for persistence.
+                    if random_card_back:
+                        card["card_back"] = random_card_back
+                        cards[file_md5] = card # Update binding
+                    generated_cards.append(card)
+                    continue
+
+                # If new
+                # Try to guess extension from URL or default to .jpg
+                ext = os.path.splitext(image_url)[1]
+                if not ext or len(ext) > 5:
+                    ext = ".jpg"
+
+                final_filename = f"{file_md5}{ext}"
+                final_path = os.path.join(UPLOAD_DIR, final_filename)
+
+                if os.path.exists(final_path):
+                    os.remove(temp_path)
+                else:
+                    os.rename(temp_path, final_path)
+
+                new_card = process_single_file_generation(final_path, file_md5, random_card_back)
+                cards[file_md5] = new_card
+                generated_cards.append(new_card)
+
+            except Exception as loop_e:
+                print(f"Error in god draw loop: {loop_e}")
+                continue
+
+        save_cards(cards)
+        return JSONResponse(content=generated_cards, media_type="application/json; charset=utf-8")
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/cards")
 async def get_cards():
     cards = load_cards()
@@ -245,11 +339,7 @@ async def get_cards():
 
 @app.get("/api/card-backs")
 async def list_card_backs():
-    files = []
-    if os.path.exists(CARD_BACKS_DIR):
-        for f in os.listdir(CARD_BACKS_DIR):
-            if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.svg')):
-                files.append(f"/static/card_backs/{f}")
+    files = get_available_card_backs()
     return JSONResponse(content={"card_backs": files}, media_type="application/json; charset=utf-8")
 
 @app.get("/")
@@ -259,3 +349,7 @@ async def read_index():
 @app.get("/batch")
 async def read_batch():
     return FileResponse('static/batch.html')
+
+@app.get("/god-draw")
+async def read_god_draw():
+    return FileResponse('static/god_draw.html')
