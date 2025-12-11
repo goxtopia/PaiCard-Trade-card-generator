@@ -92,6 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Click to Flip Logic
             wrapper.addEventListener('click', () => {
                 cardEl.classList.toggle('is-flipped');
+                if (!cardEl.classList.contains('is-flipped')) {
+                    triggerRarityFX(card.rarity);
+                }
             });
 
             batchGrid.appendChild(wrapper);

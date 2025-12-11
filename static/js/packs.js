@@ -179,6 +179,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Flip logic
             wrapper.addEventListener('click', () => {
                 cardEl.classList.toggle('is-flipped');
+                if (!cardEl.classList.contains('is-flipped')) {
+                    triggerRarityFX(card.rarity);
+                }
             });
 
             openedGrid.appendChild(wrapper);

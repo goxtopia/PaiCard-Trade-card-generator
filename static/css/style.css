@@ -767,11 +767,23 @@ img {
 .card.theme-crimson .card-front { background: #c0392b; border-color: #922b21; }
 
 /* SSR - Purple */
-.card.theme-purple .card-front { background: #9b59b6; border-color: #8e44ad; }
+.card.theme-purple .card-front {
+    background: #9b59b6;
+    border-color: #8e44ad;
+    box-shadow: 0 0 15px #9b59b6;
+}
 /* SSR - Magenta */
-.card.theme-magenta .card-front { background: #dda0dd; border-color: #800080; }
+.card.theme-magenta .card-front {
+    background: #dda0dd;
+    border-color: #800080;
+    box-shadow: 0 0 15px #dda0dd;
+}
 /* SSR - Deep Blue */
-.card.theme-deep-blue .card-front { background: #34495e; border-color: #2c3e50; }
+.card.theme-deep-blue .card-front {
+    background: #34495e;
+    border-color: #2c3e50;
+    box-shadow: 0 0 15px #3498db;
+}
 
 /* UR - Rainbow (Gradient) */
 .card.theme-rainbow .card-front {
@@ -844,18 +856,19 @@ img {
 
 /* Lightning (SSR) */
 .card.effect-lightning .rarity-overlay {
-    /* Simple lightning simulation using gradients, better with SVG/GIF but sticking to CSS */
     background:
-        linear-gradient(45deg, transparent 48%, rgba(255,255,255,0.6) 50%, transparent 52%);
+        linear-gradient(45deg, transparent 45%, rgba(255,255,255,0.9) 50%, transparent 55%),
+        linear-gradient(-45deg, transparent 45%, rgba(255,255,255,0.5) 50%, transparent 55%);
     background-size: 200% 200%;
-    mix-blend-mode: overlay;
-    animation: lightning-flash 2s infinite;
+    mix-blend-mode: screen;
+    filter: drop-shadow(0 0 5px cyan);
+    animation: lightning-flash 0.5s infinite;
 }
 @keyframes lightning-flash {
-    0%, 90% { opacity: 0; background-position: 0 0; }
-    92% { opacity: 1; background-position: 100% 100%; }
-    94% { opacity: 0; }
-    96% { opacity: 1; background-position: 50% 50%; }
+    0% { opacity: 0; background-position: 0 0; }
+    10% { opacity: 1; background-position: 100% 100%; }
+    20% { opacity: 0; }
+    30% { opacity: 1; background-position: 50% 50%; }
     100% { opacity: 0; }
 }
 
