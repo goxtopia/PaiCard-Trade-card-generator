@@ -582,12 +582,12 @@ async def upload_packs(
 @app.get("/api/packs")
 async def get_packs():
     packs = load_packs()
-    # Filter unopened/processing packs?
-    # User requirement: "Allow user to open... for unopened... don't put in lib"
-    # This endpoint should list packs so user can see them and open them.
-    # We can return all, sorting by date.
 
-    pack_list = list(packs.values())
+    pack_list = []
+    for pack in packs.values():
+        if pack["status"] != "opened":
+            pack_list.append(pack)
+
     pack_list.sort(key=lambda x: x.get("created_at", 0), reverse=True)
     return JSONResponse(content=pack_list)
 
