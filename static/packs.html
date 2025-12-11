@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Packs - AI Card Generator</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        .pack-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .pack-item {
+            background: linear-gradient(135deg, #2c3e50, #000);
+            border: 2px solid #f1c40f;
+            border-radius: 8px;
+            aspect-ratio: 2/3;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .pack-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(241, 196, 15, 0.5);
+        }
+
+        .pack-item.processing {
+            border-color: #7f8c8d;
+            cursor: wait;
+            opacity: 0.7;
+        }
+
+        .pack-item.opened {
+            border-color: #27ae60;
+            opacity: 0.5;
+        }
+
+        .pack-label {
+            font-family: 'Cinzel', serif;
+            color: #f1c40f;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .pack-status {
+            color: #ecf0f1;
+            font-size: 0.9rem;
+        }
+
+        /* Opened View */
+        .opened-view {
+            display: none;
+            width: 100%;
+        }
+
+        .packs-view {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+    </style>
+</head>
+<body class="scrollable">
+    <div class="batch-container">
+        <div class="header-nav">
+             <a href="/" class="back-link">&larr; Single</a>
+             <span style="margin: 0 10px; color: #555;">|</span>
+             <a href="/batch" class="back-link">Batch</a>
+             <span style="margin: 0 10px; color: #555;">|</span>
+             <a href="/god-draw" class="back-link">God's Draw</a>
+        </div>
+
+        <h1 class="app-title">Card Packs</h1>
+
+        <!-- Packs List View -->
+        <div id="packsView" class="packs-view">
+            <div class="batch-controls">
+                <h3>Create New Packs</h3>
+                <div class="card-back-selector" id="cardBackList">
+                    <!-- Injected via JS -->
+                </div>
+                <input type="file" id="filesInput" accept="image/*" multiple>
+                <br>
+                <p id="fileCount">0 files selected</p>
+                <br>
+                <button id="uploadBtn" class="btn primary-btn" disabled>Create Packs</button>
+                <p id="statusText" class="status-text">Ready.</p>
+            </div>
+
+            <h2 style="color: #f1c40f; margin-top: 30px;">My Packs</h2>
+            <div id="packGrid" class="pack-grid">
+                <!-- Packs injected here -->
+            </div>
+        </div>
+
+        <!-- Opened Pack View -->
+        <div id="openedView" class="opened-view">
+            <button id="backToPacksBtn" class="btn secondary-btn" style="margin-bottom: 20px;">&larr; Back to Packs</button>
+            <div id="openedGrid" class="batch-grid">
+                <!-- Cards injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/packs.js"></script>
+</body>
+</html>
