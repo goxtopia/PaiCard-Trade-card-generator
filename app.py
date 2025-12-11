@@ -80,11 +80,58 @@ vlm_service = VLMService(api_base=API_BASE, api_key=API_KEY, use_stub=USE_STUB)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+def get_random_effect_and_theme(rarity):
+    rarity = rarity.upper()
+
+    # Defaults
+    effect = ""
+    theme = ""
+
+    # Probability Weights
+    if rarity == "N":
+        # Effect: 10% chance for low tier effect
+        if random.random() < 0.1:
+            effect = random.choice(["effect-dust", "effect-static"])
+        # Theme
+        theme = random.choice(["theme-gray", "theme-pale-blue", "theme-pale-green"])
+
+    elif rarity == "R":
+        # Effect: 30% chance
+        if random.random() < 0.3:
+            effect = random.choice(["effect-shine", "effect-sweep"])
+        # Theme
+        theme = random.choice(["theme-bronze", "theme-silver", "theme-steel"])
+
+    elif rarity == "SR":
+        # Effect: 60% chance
+        if random.random() < 0.6:
+            effect = random.choice(["effect-holographic", "effect-shine", "effect-sweep"])
+        # Theme
+        theme = random.choice(["theme-gold", "theme-orange", "theme-crimson"])
+
+    elif rarity == "SSR":
+        # Effect: 90% chance
+        if random.random() < 0.9:
+            effect = random.choice(["effect-lightning", "effect-pulse", "effect-holographic"])
+        # Theme
+        theme = random.choice(["theme-purple", "theme-magenta", "theme-deep-blue"])
+
+    elif rarity == "UR":
+        # Effect: 100% chance
+        effect = random.choice(["effect-cosmic", "effect-pulse", "effect-lightning", "effect-holographic"])
+        # Theme
+        theme = random.choice(["theme-rainbow", "theme-black-gold", "theme-galaxy"])
+
+    return effect, theme
+
 def process_single_file_generation(file_path, file_md5, card_back, existing_card=None):
     # Analyze
     analysis = vlm_service.analyze_image(file_path)
 
     filename = os.path.basename(file_path)
+
+    # Generate random visual attributes
+    effect, theme = get_random_effect_and_theme(analysis["rarity"])
 
     import time
     new_card = {
@@ -97,12 +144,24 @@ def process_single_file_generation(file_path, file_md5, card_back, existing_card
         "atk": analysis.get("atk", "0"),
         "def": analysis.get("def", "0"),
         "card_back": card_back,
-        "created_at": int(time.time())
+        "created_at": int(time.time()),
+        "effect_type": effect,
+        "color_theme": theme
     }
 
-    # Preserve existing card_back if not provided
-    if existing_card and not card_back and "card_back" in existing_card:
-        new_card["card_back"] = existing_card["card_back"]
+    # Preserve existing attributes if needed (though usually we want new randoms on regenerate?
+    # Requirement says "randomly assigned at generation", so new generation = new randoms is correct.
+    # But if we are just "updating" something else, we might want to keep them.
+    # Current logic is "Regenerate" button calls api/generate with regenerate=true.
+    # We should probably keep them if we are just re-saving, but if we are re-analyzing (VLM call), it's a new "generation".
+    # The VLM is called above, so it is a new generation. We assign new randoms.)
+
+    # However, preserve card_back if not provided as before
+    if existing_card:
+        if not card_back and "card_back" in existing_card:
+            new_card["card_back"] = existing_card["card_back"]
+        # If we wanted to preserve theme/effect on re-generation, we would check here.
+        # But usually regeneration implies a re-roll of stats/rarity, so re-rolling visual fx makes sense.
 
     return new_card
 
