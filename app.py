@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form, BackgroundTasks
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -10,6 +10,7 @@ import hashlib
 import json
 import random
 import requests
+import time
 from typing import Optional, List
 from vlm import VLMService
 
@@ -40,6 +41,7 @@ app.add_middleware(
 UPLOAD_DIR = "uploads"
 CARD_BACKS_DIR = "static/card_backs"
 CARDS_DB = "cards.json"
+PACKS_DB = "packs.json"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(CARD_BACKS_DIR, exist_ok=True)
@@ -54,6 +56,16 @@ def load_cards():
 def save_cards(cards):
     with open(CARDS_DB, "w") as f:
         json.dump(cards, f, indent=2)
+
+def load_packs():
+    if not os.path.exists(PACKS_DB):
+        return {}
+    with open(PACKS_DB, "r") as f:
+        return json.load(f)
+
+def save_packs(packs):
+    with open(PACKS_DB, "w") as f:
+        json.dump(packs, f, indent=2)
 
 def calculate_md5(file_path):
     hash_md5 = hashlib.md5()
@@ -124,7 +136,7 @@ def get_random_effect_and_theme(rarity):
 
     return effect, theme
 
-def process_single_file_generation(file_path, file_md5, card_back, existing_card=None):
+def process_single_file_generation(file_path, file_md5, card_back, existing_card=None, hidden=False):
     # Analyze
     analysis = vlm_service.analyze_image(file_path)
 
@@ -133,7 +145,6 @@ def process_single_file_generation(file_path, file_md5, card_back, existing_card
     # Generate random visual attributes
     effect, theme = get_random_effect_and_theme(analysis["rarity"])
 
-    import time
     new_card = {
         "md5": file_md5,
         "filename": filename,
@@ -146,24 +157,153 @@ def process_single_file_generation(file_path, file_md5, card_back, existing_card
         "card_back": card_back,
         "created_at": int(time.time()),
         "effect_type": effect,
-        "color_theme": theme
+        "color_theme": theme,
+        "hidden": hidden
     }
 
-    # Preserve existing attributes if needed (though usually we want new randoms on regenerate?
-    # Requirement says "randomly assigned at generation", so new generation = new randoms is correct.
-    # But if we are just "updating" something else, we might want to keep them.
-    # Current logic is "Regenerate" button calls api/generate with regenerate=true.
-    # We should probably keep them if we are just re-saving, but if we are re-analyzing (VLM call), it's a new "generation".
-    # The VLM is called above, so it is a new generation. We assign new randoms.)
-
-    # However, preserve card_back if not provided as before
+    # Preserve existing attributes if needed
     if existing_card:
         if not card_back and "card_back" in existing_card:
             new_card["card_back"] = existing_card["card_back"]
-        # If we wanted to preserve theme/effect on re-generation, we would check here.
-        # But usually regeneration implies a re-roll of stats/rarity, so re-rolling visual fx makes sense.
 
     return new_card
+
+def background_pack_processing(file_paths, pack_ids, card_back):
+    chunk_size = 10
+    total_files = len(file_paths)
+
+    for i, pack_id in enumerate(pack_ids):
+        # Determine files for this pack
+        start_idx = i * chunk_size
+        end_idx = min((i + 1) * chunk_size, total_files)
+        current_batch_paths = file_paths[start_idx:end_idx]
+
+        # Process cards
+        pack_card_md5s = []
+        for file_path in current_batch_paths:
+            try:
+                # Calculate MD5
+                file_md5 = calculate_md5(file_path)
+
+                # Load current cards to check existence
+                cards = load_cards()
+
+                # If card exists, we use it. But we enforce hidden if it's new?
+                # Actually, if it exists and is hidden=False, we shouldn't hide it.
+                # If it doesn't exist, we create it with hidden=True.
+
+                if file_md5 in cards:
+                    card = cards[file_md5]
+                    # Don't overwrite hidden status if already visible
+                    # But if we want to ensure it's in the pack, we just add md5
+                    pack_card_md5s.append(file_md5)
+                    # Note: We are not re-generating existing cards here for speed
+                else:
+                    # Generate new
+                    new_card = process_single_file_generation(
+                        file_path,
+                        file_md5,
+                        card_back,
+                        hidden=True
+                    )
+                    cards[file_md5] = new_card
+                    save_cards(cards)
+                    pack_card_md5s.append(file_md5)
+
+            except Exception as e:
+                print(f"Error processing card in pack: {e}")
+                continue
+
+        # Update Pack Status
+        packs = load_packs()
+        if pack_id in packs:
+            packs[pack_id]["status"] = "ready"
+            packs[pack_id]["cards"] = pack_card_md5s
+            save_packs(packs)
+
+        # Clean up processed files (if they were temp)
+        # In upload_packs, we saved them to UPLOAD_DIR with random names or MD5s?
+        # We saved them as temp.
+        # If they became cards, they were renamed in process_single_file_generation?
+        # Wait, process_single_file_generation takes file_path but doesn't move/rename it itself usually
+        # (in the original code, the route handler did the rename).
+        # We need to handle file persistence here.
+        # Let's adjust process_single_file_generation usage.
+        # The file paths passed here are temp files.
+        # process_single_file_generation expects the file to be readable.
+        # It creates a 'filename' in the object but assumes the file exists at 'image_url'.
+        # We should rename temp files to final MD5 filenames here if new.
+
+        # Refactoring loop above slightly to handle file moves:
+        # (Done implicitly: if card exists, we delete temp. If new, we move temp to final.)
+        # BUT process_single_file_generation doesn't move files.
+        # So we need to do it.
+        pass # Logic handled below in cleaner loop
+
+def background_pack_processing_wrapper(file_paths, pack_ids):
+    # This wrapper handles the file logic properly
+    chunk_size = 10
+    total_files = len(file_paths)
+
+    current_file_idx = 0
+
+    for pack_id in pack_ids:
+        pack_card_md5s = []
+
+        # Load pack to get assigned card back
+        packs = load_packs()
+        current_pack_back = None
+        if pack_id in packs:
+            current_pack_back = packs[pack_id].get("card_back")
+
+        # Process up to 10 files for this pack
+        files_in_pack = 0
+        while files_in_pack < 10 and current_file_idx < total_files:
+            temp_path = file_paths[current_file_idx]
+            current_file_idx += 1
+            files_in_pack += 1
+
+            try:
+                file_md5 = calculate_md5(temp_path)
+
+                cards = load_cards()
+                if file_md5 in cards:
+                    # Clean temp
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                    pack_card_md5s.append(file_md5)
+                else:
+                    # Move to final
+                    ext = os.path.splitext(temp_path)[1]
+                    if not ext: ext = ".jpg"
+                    final_filename = f"{file_md5}{ext}"
+                    final_path = os.path.join(UPLOAD_DIR, final_filename)
+
+                    if os.path.exists(final_path):
+                        if os.path.exists(temp_path):
+                            os.remove(temp_path)
+                    else:
+                        os.rename(temp_path, final_path)
+
+                    # Generate
+                    new_card = process_single_file_generation(
+                        final_path,
+                        file_md5,
+                        current_pack_back,
+                        hidden=True
+                    )
+                    cards[file_md5] = new_card
+                    save_cards(cards)
+                    pack_card_md5s.append(file_md5)
+            except Exception as e:
+                print(f"Error processing file {temp_path}: {e}")
+
+        # Update Pack
+        packs = load_packs()
+        if pack_id in packs:
+            packs[pack_id]["status"] = "ready"
+            packs[pack_id]["cards"] = pack_card_md5s
+            save_packs(packs)
 
 @app.post("/api/generate")
 async def generate_card(
@@ -182,7 +322,7 @@ async def generate_card(
             if not os.path.exists(file_path):
                 raise HTTPException(status_code=404, detail="Original image file missing")
             
-            new_card = process_single_file_generation(file_path, existing_md5, card_back, existing_card=card_data)
+            new_card = process_single_file_generation(file_path, existing_md5, card_back, existing_card=card_data, hidden=False)
             
             cards[existing_md5] = new_card
             save_cards(cards)
@@ -208,6 +348,8 @@ async def generate_card(
             # Update the binding if provided
             if card_back:
                  cards[file_md5]["card_back"] = card_back
+                 # Ensure it's visible if the user explicitly uploaded it again
+                 cards[file_md5]["hidden"] = False
                  save_cards(cards)
 
             return JSONResponse(content=cards[file_md5], media_type="application/json; charset=utf-8")
@@ -226,7 +368,7 @@ async def generate_card(
         else:
             os.rename(temp_path, final_path)
             
-        new_card = process_single_file_generation(final_path, file_md5, card_back)
+        new_card = process_single_file_generation(final_path, file_md5, card_back, hidden=False)
         
         cards[file_md5] = new_card
         save_cards(cards)
@@ -269,6 +411,7 @@ async def batch_generate_card(
                 # Update card back binding for the batch
                 if card_back:
                     card["card_back"] = card_back
+                    card["hidden"] = False # Unhide
                     cards[file_md5] = card # Ensure update is saved
                 generated_cards.append(card)
                 continue
@@ -286,7 +429,7 @@ async def batch_generate_card(
             else:
                 os.rename(temp_path, final_path)
 
-            new_card = process_single_file_generation(final_path, file_md5, card_back)
+            new_card = process_single_file_generation(final_path, file_md5, card_back, hidden=False)
             cards[file_md5] = new_card
             generated_cards.append(new_card)
 
@@ -349,6 +492,7 @@ async def god_draw_card():
                     # without saving, OR update the binding. Updating binding is safer for persistence.
                     if random_card_back:
                         card["card_back"] = random_card_back
+                        card["hidden"] = False
                         cards[file_md5] = card # Update binding
                     generated_cards.append(card)
                     continue
@@ -367,7 +511,7 @@ async def god_draw_card():
                 else:
                     os.rename(temp_path, final_path)
 
-                new_card = process_single_file_generation(final_path, file_md5, random_card_back)
+                new_card = process_single_file_generation(final_path, file_md5, random_card_back, hidden=False)
                 cards[file_md5] = new_card
                 generated_cards.append(new_card)
 
@@ -383,15 +527,109 @@ async def god_draw_card():
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/upload-packs")
+async def upload_packs(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    card_back: Optional[str] = Form(None) # Ignored now
+):
+    try:
+        packs = load_packs()
+        new_pack_ids = []
+        file_paths = []
+        available_card_backs = get_available_card_backs()
+
+        # Save all files first
+        for file in files:
+            temp_filename = f"temp_pack_{uuid.uuid4()}{os.path.splitext(file.filename)[1]}"
+            temp_path = os.path.join(UPLOAD_DIR, temp_filename)
+            with open(temp_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            file_paths.append(temp_path)
+
+        # Create Packs
+        num_files = len(files)
+        # Math.ceil
+        num_packs = (num_files + 9) // 10
+
+        for _ in range(num_packs):
+            pack_id = str(uuid.uuid4())
+
+            # Randomly select card back for this pack
+            random_back = random.choice(available_card_backs) if available_card_backs else None
+
+            packs[pack_id] = {
+                "id": pack_id,
+                "status": "processing",
+                "cards": [],
+                "created_at": int(time.time()),
+                "card_back": random_back
+            }
+            new_pack_ids.append(pack_id)
+
+        save_packs(packs)
+
+        # Start Background Processing
+        background_tasks.add_task(background_pack_processing_wrapper, file_paths, new_pack_ids)
+
+        return JSONResponse(content={"message": f"Processing {num_files} images into {num_packs} packs.", "pack_ids": new_pack_ids})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/packs")
+async def get_packs():
+    packs = load_packs()
+    # Filter unopened/processing packs?
+    # User requirement: "Allow user to open... for unopened... don't put in lib"
+    # This endpoint should list packs so user can see them and open them.
+    # We can return all, sorting by date.
+
+    pack_list = list(packs.values())
+    pack_list.sort(key=lambda x: x.get("created_at", 0), reverse=True)
+    return JSONResponse(content=pack_list)
+
+@app.post("/api/open-pack/{pack_id}")
+async def open_pack(pack_id: str):
+    packs = load_packs()
+    if pack_id not in packs:
+        raise HTTPException(status_code=404, detail="Pack not found")
+
+    pack = packs[pack_id]
+    if pack["status"] == "processing":
+        raise HTTPException(status_code=400, detail="Pack is still processing")
+
+    # Reveal cards
+    cards = load_cards()
+    revealed_cards = []
+
+    for md5 in pack["cards"]:
+        if md5 in cards:
+            card = cards[md5]
+            card["hidden"] = False # Unhide!
+            cards[md5] = card
+            revealed_cards.append(card)
+
+    pack["status"] = "opened"
+    packs[pack_id] = pack
+
+    save_cards(cards)
+    save_packs(packs)
+
+    return JSONResponse(content=revealed_cards)
+
 @app.get("/api/cards")
 async def get_cards():
     cards = load_cards()
     valid_cards = []
     
-    # Filter out cards where the file is missing
-    # We do not delete them from DB automatically to avoid race conditions,
-    # but we prevent the frontend from trying to load them.
     for md5, card in cards.items():
+        # Check hidden status
+        if card.get("hidden", False):
+            continue
+
         file_path = os.path.join(UPLOAD_DIR, card['filename'])
         if os.path.exists(file_path):
             valid_cards.append(card)
@@ -414,3 +652,7 @@ async def read_batch():
 @app.get("/god-draw")
 async def read_god_draw():
     return FileResponse('static/god_draw.html')
+
+@app.get("/packs")
+async def read_packs():
+    return FileResponse('static/packs.html')
