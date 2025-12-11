@@ -95,6 +95,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const cardDiv = document.createElement('div');
         cardDiv.className = `card rarity-${data.rarity.toLowerCase()}`;
+
+        if (data.color_theme) cardDiv.classList.add(data.color_theme);
+        if (data.effect_type) cardDiv.classList.add(data.effect_type);
+
         cardDiv.style.width = '100%';
         cardDiv.style.height = '100%';
         
@@ -217,10 +221,18 @@ document.addEventListener('DOMContentLoaded', () => {
         // Adjust description font size if needed
         adjustDescriptionSize(cardDescription);
 
-        // Reset Rarities
+        // Reset Rarities & Apply New Visuals
         cardElement.className = 'card'; // Reset to just 'card'
         cardElement.classList.add(`rarity-${data.rarity.toLowerCase()}`);
         
+        if (data.color_theme) {
+            cardElement.classList.add(data.color_theme);
+        }
+
+        if (data.effect_type) {
+            cardElement.classList.add(data.effect_type);
+        }
+
         // Show regenerate button
         regenerateBtn.style.display = 'inline-block';
         

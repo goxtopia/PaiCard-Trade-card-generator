@@ -42,6 +42,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const cardEl = document.createElement('div');
             cardEl.className = `card rarity-${card.rarity.toLowerCase()} is-flipped`; // Start flipped
 
+            if (card.color_theme) cardEl.classList.add(card.color_theme);
+            if (card.effect_type) cardEl.classList.add(card.effect_type);
+
             // Front Face
             const front = document.createElement('div');
             front.className = 'card-face card-front';
