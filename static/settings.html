@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - AI Card Generator</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        .settings-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #ecf0f1;
+        }
+
+        .settings-form {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #444;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #f1c40f;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            height: 80px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            border: 1px solid #7f8c8d;
+            padding: 10px;
+            border-radius: 4px;
+            resize: vertical;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+    </style>
+</head>
+<body class="scrollable">
+    <div class="settings-container">
+        <a href="/" class="back-link">&larr; Back to Home</a>
+
+        <h1 class="app-title">Settings</h1>
+
+        <div class="settings-form">
+            <h3>Custom Prompts</h3>
+            <p style="margin-bottom: 20px; color: #bdc3c7;">Customize the prompts sent to the VLM model. Leave blank to use defaults.</p>
+
+            <div class="form-group">
+                <label for="promptRarity">Rarity Prompt</label>
+                <textarea id="promptRarity" placeholder="Analyze this image and determine its rarity..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="promptName">Name Prompt</label>
+                <textarea id="promptName" placeholder="Create a funny and creative name..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="promptDescription">Description Prompt</label>
+                <textarea id="promptDescription" placeholder="Write a creative description..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="promptAtk">ATK Prompt</label>
+                <textarea id="promptAtk" placeholder="Determine an ATK value..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="promptDef">DEF Prompt</label>
+                <textarea id="promptDef" placeholder="Determine a DEF value..."></textarea>
+            </div>
+
+            <div class="actions">
+                <button id="resetBtn" class="btn secondary-btn">Reset Defaults</button>
+                <button id="saveBtn" class="btn primary-btn">Save Settings</button>
+            </div>
+
+            <p id="statusText" class="status-text" style="text-align: right; margin-top: 10px;"></p>
+        </div>
+    </div>
+
+    <script src="/static/js/settings.js"></script>
+</body>
+</html>

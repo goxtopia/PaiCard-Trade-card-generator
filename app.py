@@ -11,7 +11,7 @@ import json
 import random
 import requests
 import time
-from typing import Optional, List
+from typing import Optional, List, Dict
 from vlm import VLMService
 
 app = FastAPI()
@@ -42,11 +42,12 @@ UPLOAD_DIR = "uploads"
 CARD_BACKS_DIR = "static/card_backs"
 CARDS_DB = "cards.json"
 PACKS_DB = "packs.json"
+SETTINGS_DB = "settings.json"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(CARD_BACKS_DIR, exist_ok=True)
 
-# Helper for Card Database
+# Helper for Databases
 def load_cards():
     if not os.path.exists(CARDS_DB):
         return {}
@@ -66,6 +67,16 @@ def load_packs():
 def save_packs(packs):
     with open(PACKS_DB, "w") as f:
         json.dump(packs, f, indent=2)
+
+def load_settings():
+    if not os.path.exists(SETTINGS_DB):
+        return {}
+    with open(SETTINGS_DB, "r") as f:
+        return json.load(f)
+
+def save_settings(settings):
+    with open(SETTINGS_DB, "w") as f:
+        json.dump(settings, f, indent=2)
 
 def calculate_md5(file_path):
     hash_md5 = hashlib.md5()
@@ -137,8 +148,12 @@ def get_random_effect_and_theme(rarity):
     return effect, theme
 
 def process_single_file_generation(file_path, file_md5, card_back, existing_card=None, hidden=False):
+    # Load custom prompts
+    settings = load_settings()
+    custom_prompts = settings.get("prompts", None)
+
     # Analyze
-    analysis = vlm_service.analyze_image(file_path)
+    analysis = vlm_service.analyze_image(file_path, custom_prompts=custom_prompts)
 
     filename = os.path.basename(file_path)
 
@@ -167,78 +182,6 @@ def process_single_file_generation(file_path, file_md5, card_back, existing_card
             new_card["card_back"] = existing_card["card_back"]
 
     return new_card
-
-def background_pack_processing(file_paths, pack_ids, card_back):
-    chunk_size = 10
-    total_files = len(file_paths)
-
-    for i, pack_id in enumerate(pack_ids):
-        # Determine files for this pack
-        start_idx = i * chunk_size
-        end_idx = min((i + 1) * chunk_size, total_files)
-        current_batch_paths = file_paths[start_idx:end_idx]
-
-        # Process cards
-        pack_card_md5s = []
-        for file_path in current_batch_paths:
-            try:
-                # Calculate MD5
-                file_md5 = calculate_md5(file_path)
-
-                # Load current cards to check existence
-                cards = load_cards()
-
-                # If card exists, we use it. But we enforce hidden if it's new?
-                # Actually, if it exists and is hidden=False, we shouldn't hide it.
-                # If it doesn't exist, we create it with hidden=True.
-
-                if file_md5 in cards:
-                    card = cards[file_md5]
-                    # Don't overwrite hidden status if already visible
-                    # But if we want to ensure it's in the pack, we just add md5
-                    pack_card_md5s.append(file_md5)
-                    # Note: We are not re-generating existing cards here for speed
-                else:
-                    # Generate new
-                    new_card = process_single_file_generation(
-                        file_path,
-                        file_md5,
-                        card_back,
-                        hidden=True
-                    )
-                    cards[file_md5] = new_card
-                    save_cards(cards)
-                    pack_card_md5s.append(file_md5)
-
-            except Exception as e:
-                print(f"Error processing card in pack: {e}")
-                continue
-
-        # Update Pack Status
-        packs = load_packs()
-        if pack_id in packs:
-            packs[pack_id]["status"] = "ready"
-            packs[pack_id]["cards"] = pack_card_md5s
-            save_packs(packs)
-
-        # Clean up processed files (if they were temp)
-        # In upload_packs, we saved them to UPLOAD_DIR with random names or MD5s?
-        # We saved them as temp.
-        # If they became cards, they were renamed in process_single_file_generation?
-        # Wait, process_single_file_generation takes file_path but doesn't move/rename it itself usually
-        # (in the original code, the route handler did the rename).
-        # We need to handle file persistence here.
-        # Let's adjust process_single_file_generation usage.
-        # The file paths passed here are temp files.
-        # process_single_file_generation expects the file to be readable.
-        # It creates a 'filename' in the object but assumes the file exists at 'image_url'.
-        # We should rename temp files to final MD5 filenames here if new.
-
-        # Refactoring loop above slightly to handle file moves:
-        # (Done implicitly: if card exists, we delete temp. If new, we move temp to final.)
-        # BUT process_single_file_generation doesn't move files.
-        # So we need to do it.
-        pass # Logic handled below in cleaner loop
 
 def background_pack_processing_wrapper(file_paths, pack_ids):
     # This wrapper handles the file logic properly
@@ -620,6 +563,23 @@ async def open_pack(pack_id: str):
 
     return JSONResponse(content=revealed_cards)
 
+# Settings Endpoints
+@app.get("/api/settings")
+async def get_settings():
+    return JSONResponse(content=load_settings())
+
+class SettingsModel(dict):
+    pass
+
+@app.post("/api/settings")
+async def update_settings(settings: dict):
+    # Validate structure?
+    # Expected: { "prompts": { "rarity": "...", ... } }
+    current_settings = load_settings()
+    current_settings.update(settings)
+    save_settings(current_settings)
+    return JSONResponse(content={"message": "Settings saved"})
+
 @app.get("/api/cards")
 async def get_cards():
     cards = load_cards()
@@ -656,3 +616,7 @@ async def read_god_draw():
 @app.get("/packs")
 async def read_packs():
     return FileResponse('static/packs.html')
+
+@app.get("/settings")
+async def read_settings():
+    return FileResponse('static/settings.html')

@@ -7,6 +7,14 @@ from typing import Optional, Dict
 from io import BytesIO
 from PIL import Image
 
+DEFAULT_PROMPTS = {
+    "rarity": "Analyze this image and determine its rarity. Choose one from: N, R, SR, SSR, UR. Output only the rarity code (e.g., SSR).",
+    "name": "Create a funny and creative name for a trading card based on this image. Output only the name. 回复中文(一定要简短、恶搞、有趣，最好还带点诗意)",
+    "description": "Write a creative and funny ability（最好带点调侃意味） description（也可以是无效果，如果你觉得合理的话） for this trading card based on the image, in the style of Yu-Gi-Oh. KEEP IT SHORT (max 2 sentences). Output only the description. 回复中文",
+    "atk": "Determine an ATK (Attack) value for this card between 0 and 5000 based on its power level. Output only the number.",
+    "def": "Determine a DEF (Defense) value for this card between 0 and 5000 based on its toughness. Output only the number."
+}
+
 class VLMService:
     def __init__(self, api_base="http://192.168.124.22:8080", api_key="sk-placeholder", model="vlm-model", use_stub=True):
         self.api_base = api_base.rstrip('/')
@@ -14,17 +22,24 @@ class VLMService:
         self.model = model
         self.use_stub = use_stub
 
-    def analyze_image(self, image_path: str) -> Dict[str, str]:
+    def analyze_image(self, image_path: str, custom_prompts: Optional[Dict[str, str]] = None) -> Dict[str, str]:
         if self.use_stub:
             return self._stub_analyze(image_path)
         
+        # Merge defaults with custom prompts
+        prompts = DEFAULT_PROMPTS.copy()
+        if custom_prompts:
+            for key, value in custom_prompts.items():
+                if value and value.strip():
+                    prompts[key] = value
+
         try:
             # Separate calls as requested to handle smaller models better
-            rarity = self._call_vlm(image_path, "Analyze this image and determine its rarity. Choose one from: N, R, SR, SSR, UR. Output only the rarity code (e.g., SSR).")
-            name = self._call_vlm(image_path, "Create a funny and creative name for a trading card based on this image. Output only the name. 回复中文(一定要简短、恶搞、有趣，最好还带点诗意)")
-            description = self._call_vlm(image_path, "Write a creative and funny ability（最好带点调侃意味） description（也可以是无效果，如果你觉得合理的话） for this trading card based on the image, in the style of Yu-Gi-Oh. KEEP IT SHORT (max 2 sentences). Output only the description. 回复中文")
-            atk = self._call_vlm(image_path, "Determine an ATK (Attack) value for this card between 0 and 5000 based on its power level. Output only the number.")
-            def_ = self._call_vlm(image_path, "Determine a DEF (Defense) value for this card between 0 and 5000 based on its toughness. Output only the number.")
+            rarity = self._call_vlm(image_path, prompts["rarity"])
+            name = self._call_vlm(image_path, prompts["name"])
+            description = self._call_vlm(image_path, prompts["description"])
+            atk = self._call_vlm(image_path, prompts["atk"])
+            def_ = self._call_vlm(image_path, prompts["def"])
             
             # Fallback if calls fail or return empty (basic error handling)
             if not rarity: rarity = "N"
