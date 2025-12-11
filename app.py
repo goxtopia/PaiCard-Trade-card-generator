@@ -240,7 +240,7 @@ def background_pack_processing(file_paths, pack_ids, card_back):
         # So we need to do it.
         pass # Logic handled below in cleaner loop
 
-def background_pack_processing_wrapper(file_paths, pack_ids, card_back):
+def background_pack_processing_wrapper(file_paths, pack_ids):
     # This wrapper handles the file logic properly
     chunk_size = 10
     total_files = len(file_paths)
@@ -249,6 +249,12 @@ def background_pack_processing_wrapper(file_paths, pack_ids, card_back):
 
     for pack_id in pack_ids:
         pack_card_md5s = []
+
+        # Load pack to get assigned card back
+        packs = load_packs()
+        current_pack_back = None
+        if pack_id in packs:
+            current_pack_back = packs[pack_id].get("card_back")
 
         # Process up to 10 files for this pack
         files_in_pack = 0
@@ -283,7 +289,7 @@ def background_pack_processing_wrapper(file_paths, pack_ids, card_back):
                     new_card = process_single_file_generation(
                         final_path,
                         file_md5,
-                        card_back,
+                        current_pack_back,
                         hidden=True
                     )
                     cards[file_md5] = new_card
@@ -525,12 +531,13 @@ async def god_draw_card():
 async def upload_packs(
     background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
-    card_back: Optional[str] = Form(None)
+    card_back: Optional[str] = Form(None) # Ignored now
 ):
     try:
         packs = load_packs()
         new_pack_ids = []
         file_paths = []
+        available_card_backs = get_available_card_backs()
 
         # Save all files first
         for file in files:
@@ -547,19 +554,23 @@ async def upload_packs(
 
         for _ in range(num_packs):
             pack_id = str(uuid.uuid4())
+
+            # Randomly select card back for this pack
+            random_back = random.choice(available_card_backs) if available_card_backs else None
+
             packs[pack_id] = {
                 "id": pack_id,
                 "status": "processing",
                 "cards": [],
                 "created_at": int(time.time()),
-                "card_back": card_back
+                "card_back": random_back
             }
             new_pack_ids.append(pack_id)
 
         save_packs(packs)
 
         # Start Background Processing
-        background_tasks.add_task(background_pack_processing_wrapper, file_paths, new_pack_ids, card_back)
+        background_tasks.add_task(background_pack_processing_wrapper, file_paths, new_pack_ids)
 
         return JSONResponse(content={"message": f"Processing {num_files} images into {num_packs} packs.", "pack_ids": new_pack_ids})
 

@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const cardBackList = document.getElementById('cardBackList');
     const filesInput = document.getElementById('filesInput');
     const uploadBtn = document.getElementById('uploadBtn');
     const statusText = document.getElementById('statusText');
@@ -10,32 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const openedGrid = document.getElementById('openedGrid');
     const backToPacksBtn = document.getElementById('backToPacksBtn');
 
-    let selectedCardBackUrl = '';
     let pollInterval = null;
-
-    // Load Card Backs
-    fetch('/api/card-backs')
-        .then(res => res.json())
-        .then(data => {
-            if (data.card_backs && data.card_backs.length > 0) {
-                data.card_backs.forEach((backUrl, index) => {
-                    const div = document.createElement('div');
-                    div.className = 'card-back-option';
-                    div.style.backgroundImage = `url(${backUrl})`;
-                    if (index === 0) {
-                        div.classList.add('selected');
-                        selectedCardBackUrl = backUrl;
-                    }
-
-                    div.onclick = () => {
-                        document.querySelectorAll('.card-back-option').forEach(el => el.classList.remove('selected'));
-                        div.classList.add('selected');
-                        selectedCardBackUrl = backUrl;
-                    };
-                    cardBackList.appendChild(div);
-                });
-            }
-        });
 
     // File Input
     filesInput.addEventListener('change', (e) => {
@@ -61,9 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
         Array.from(files).forEach(file => {
             formData.append('files', file);
         });
-        if (selectedCardBackUrl) {
-            formData.append('card_back', selectedCardBackUrl);
-        }
 
         try {
             const response = await fetch('/api/upload-packs', {
