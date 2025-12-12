@@ -21,8 +21,6 @@ class VLMService {
         .writeTimeout(60, TimeUnit.SECONDS)
         .build()
 
-    private val gson = Gson()
-
     data class CardData(
         val rarity: String,
         val name: String,
@@ -31,21 +29,24 @@ class VLMService {
         val def: String
     )
 
-    fun analyzeImage(bitmap: Bitmap, apiKey: String, apiUrl: String, model: String): CardData {
+    fun analyzeImage(bitmap: Bitmap, apiKey: String, apiUrl: String, model: String, customInstructions: String): CardData {
         // Resize image if too big
         val resizedBitmap = resizeBitmap(bitmap, 576)
         val base64Image = bitmapToBase64(resizedBitmap)
 
+        // Combine user's custom instructions with the mandatory JSON format instructions
         val prompt = """
-            Analyze this image and provide a JSON response for a trading card.
-            The JSON must have these keys:
-            - "rarity": Choose one from [N, R, SR, SSR, UR].
-            - "name": A creative, funny name (Chinese).
-            - "description": A funny ability description (Chinese), max 2 sentences.
+            $customInstructions
+
+            MANDATORY OUTPUT FORMAT:
+            You must analyze the image and return a JSON object with the following keys:
+            - "rarity": Choose one from [N, R, SR, SSR, UR] based on how epic the image looks.
+            - "name": The name of the card.
+            - "description": The ability text.
             - "atk": Number 0-5000.
             - "def": Number 0-5000.
 
-            Return ONLY the raw JSON string, no markdown formatting.
+            Return ONLY the raw JSON string. Do not include markdown formatting like ```json.
         """.trimIndent()
 
         val jsonBody = JSONObject()

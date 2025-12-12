@@ -126,6 +126,7 @@ class MainActivity : AppCompatActivity() {
         val apiKey = prefs.getString("api_key", "")
         val apiUrl = prefs.getString("api_url", "https://api.openai.com")
         val model = prefs.getString("model", "gpt-4o-mini")
+        val customPrompt = prefs.getString("custom_prompt", "Create a funny and creative name and ability description for a trading card based on this image. Name and Description should be in Chinese (Chinese).")
 
         if (apiKey.isNullOrEmpty()) {
             Toast.makeText(this, "Please set API Key in Settings", Toast.LENGTH_LONG).show()
@@ -138,7 +139,7 @@ class MainActivity : AppCompatActivity() {
         executor.execute {
             try {
                 // 1. Analyze Image
-                val cardData = vlmService.analyzeImage(selectedImageBitmap!!, apiKey!!, apiUrl!!, model!!)
+                val cardData = vlmService.analyzeImage(selectedImageBitmap!!, apiKey!!, apiUrl!!, model!!, customPrompt!!)
 
                 // 2. Prepare Display Data
                 val displayJson = JSONObject()
