@@ -96,9 +96,10 @@ class CardDetailActivity : AppCompatActivity() {
 
         // Configure Particles
         when {
-            r.contains("UR") -> particleView.setConfig(ParticleView.ParticleType.LIGHTNING)
-            r.contains("SSR") -> particleView.setConfig(ParticleView.ParticleType.SPARKLE)
-            r.contains("SR") -> particleView.setConfig(ParticleView.ParticleType.GLOW)
+            r.contains("UR") -> particleView.setConfig(ParticleView.ParticleType.COSMIC)
+            r.contains("SSR") -> particleView.setConfig(ParticleView.ParticleType.FLAME)
+            r.contains("SR") -> particleView.setConfig(ParticleView.ParticleType.LIGHTNING)
+            r.contains("R") -> particleView.setConfig(ParticleView.ParticleType.SPARKLE)
             else -> particleView.setConfig(ParticleView.ParticleType.DUST)
         }
 
@@ -120,6 +121,12 @@ class CardDetailActivity : AppCompatActivity() {
 
                 cardFront.scaleX = scaleFactor
                 cardFront.scaleY = scaleFactor
+
+                // If zooming, reset tilt immediately
+                if (cardFront.rotationX != 0f || cardFront.rotationY != 0f) {
+                    cardFront.rotationX = 0f
+                    cardFront.rotationY = 0f
+                }
                 return true
             }
         })
@@ -134,9 +141,15 @@ class CardDetailActivity : AppCompatActivity() {
 
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
-                    // Only tilt if not scaling (multitouch)
-                    if (event.pointerCount == 1) {
+                    // Only tilt if not scaling (multitouch) and not zoomed in
+                    if (event.pointerCount == 1 && !scaleGestureDetector.isInProgress && scaleFactor == 1.0f) {
                         handleTilt(event.x, event.y, rootLayout.width, rootLayout.height)
+                    } else {
+                        // Reset tilt if multitouch detected
+                        if (cardFront.rotationX != 0f || cardFront.rotationY != 0f) {
+                            cardFront.rotationX = 0f
+                            cardFront.rotationY = 0f
+                        }
                     }
                 }
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
@@ -159,7 +172,7 @@ class CardDetailActivity : AppCompatActivity() {
         val offsetY = (y - centerY) / centerY
 
         // Max tilt angles
-        val maxTilt = 20f
+        val maxTilt = 8f
 
         // Inverse logic: touching left tilts card to left (rotY negative? No, rotY negative is left side coming out)
         // Standard behavior:

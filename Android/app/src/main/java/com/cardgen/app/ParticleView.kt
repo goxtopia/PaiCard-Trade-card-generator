@@ -8,6 +8,8 @@ import android.view.View
 import java.util.Random
 import android.graphics.Color
 import android.view.Choreographer
+import kotlin.math.cos
+import kotlin.math.sin
 
 class ParticleView(context: Context, attrs: AttributeSet? = null) : View(context, attrs) {
 
@@ -23,7 +25,7 @@ class ParticleView(context: Context, attrs: AttributeSet? = null) : View(context
 
     // Configuration for different styles
     enum class ParticleType {
-        DUST, GLOW, SPARKLE, LIGHTNING
+        DUST, GLOW, SPARKLE, LIGHTNING, FLAME, COSMIC
     }
 
     private var currentType = ParticleType.DUST
@@ -40,7 +42,8 @@ class ParticleView(context: Context, attrs: AttributeSet? = null) : View(context
         var speedY: Float,
         var alpha: Int,
         var life: Float, // 0.0 to 1.0
-        var decay: Float
+        var decay: Float,
+        var color: Int? = null // Optional individual color
     )
 
     fun setConfig(type: ParticleType) {
@@ -67,6 +70,16 @@ class ParticleView(context: Context, attrs: AttributeSet? = null) : View(context
                 particleCount = 80
                 speedMultiplier = 3.0f
             }
+            ParticleType.FLAME -> {
+                particleColor = Color.parseColor("#e74c3c") // Red/Orange
+                particleCount = 100
+                speedMultiplier = 1.5f
+            }
+            ParticleType.COSMIC -> {
+                particleColor = Color.parseColor("#00BFFF") // Deep Sky Blue
+                particleCount = 120
+                speedMultiplier = 1.0f
+            }
         }
         startAnimation()
     }
@@ -91,19 +104,42 @@ class ParticleView(context: Context, attrs: AttributeSet? = null) : View(context
     private fun spawnParticle() {
         if (width == 0 || height == 0) return
 
-        val x = random.nextFloat() * width
-        val y = random.nextFloat() * height
+        var x = random.nextFloat() * width
+        var y = random.nextFloat() * height
+        var speedX = (random.nextFloat() - 0.5f) * 2 * density * speedMultiplier
+        var speedY = (random.nextFloat() - 0.5f) * 2 * density * speedMultiplier
+        var radius = (random.nextFloat() * 3 + 1) * density
+        var decay = 0.01f + random.nextFloat() * 0.02f
+        var color: Int? = null
 
-        // Spawn from center-ish for some effects, or random for others
-        // For now, random distribution is fine as a background aura
+        when (currentType) {
+            ParticleType.FLAME -> {
+                // Spawn at bottom, move up
+                x = random.nextFloat() * width
+                y = height.toFloat() + 20f
+                speedY = - (random.nextFloat() * 3 + 1) * density * speedMultiplier // Upward
+                speedX = (random.nextFloat() - 0.5f) * 1 * density
+                decay = 0.015f + random.nextFloat() * 0.02f
+                // Color shift: Red to Yellow
+                color = if (random.nextBoolean()) Color.parseColor("#e74c3c") else Color.parseColor("#f1c40f")
+            }
+            ParticleType.COSMIC -> {
+                // Spawn center, spiral out? Or just random vibrant
+                // Let's do random but with colors
+                val colors = listOf(
+                    Color.parseColor("#9b59b6"), // Purple
+                    Color.parseColor("#3498db"), // Blue
+                    Color.parseColor("#e91e63")  // Pink
+                )
+                color = colors[random.nextInt(colors.size)]
+                speedX *= 0.5f
+                speedY *= 0.5f
+                radius *= 1.5f // Larger particles
+            }
+            else -> {} // Default
+        }
 
-        val radius = (random.nextFloat() * 3 + 1) * density
-        val speedX = (random.nextFloat() - 0.5f) * 2 * density * speedMultiplier
-        val speedY = (random.nextFloat() - 0.5f) * 2 * density * speedMultiplier
-        val life = 1.0f
-        val decay = 0.01f + random.nextFloat() * 0.02f
-
-        particles.add(Particle(x, y, radius, speedX, speedY, 255, life, decay))
+        particles.add(Particle(x, y, radius, speedX, speedY, 255, 1.0f, decay, color))
     }
 
     private fun updateParticles() {
@@ -119,10 +155,16 @@ class ParticleView(context: Context, attrs: AttributeSet? = null) : View(context
             p.y += p.speedY
             p.life -= p.decay
 
-            // Fade out
-            p.alpha = (p.life * 255).toInt()
+            // Special behaviors
+            if (currentType == ParticleType.COSMIC) {
+                 // Slight gravity/pull or weird motion
+                 p.x += sin(p.life * 10) * density // Wobbly
+            }
 
-            if (p.life <= 0) {
+            // Fade out
+            p.alpha = (p.life * 255).toInt().coerceIn(0, 255)
+
+            if (p.life <= 0 || p.alpha == 0) {
                 iterator.remove()
             }
         }
@@ -132,7 +174,7 @@ class ParticleView(context: Context, attrs: AttributeSet? = null) : View(context
         super.onDraw(canvas)
 
         for (p in particles) {
-            paint.color = particleColor
+            paint.color = p.color ?: particleColor
             paint.alpha = p.alpha
             canvas.drawCircle(p.x, p.y, p.radius, paint)
         }
