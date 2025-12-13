@@ -42,6 +42,8 @@ class PackOpeningActivity : AppCompatActivity() {
         setContentView(R.layout.activity_pack_opening)
         supportActionBar?.hide()
 
+        CardRepository.init(this)
+
         packId = intent.getStringExtra("packId")
         if (packId == null) {
             finish()
@@ -104,37 +106,47 @@ class PackOpeningActivity : AppCompatActivity() {
 
     private fun savePackToLibrary() {
         executor.execute {
+            val prefs = getSharedPreferences("card_library", Context.MODE_PRIVATE)
+            val json = prefs.getString("history", "[]")
+            val type = object : TypeToken<ArrayList<SingleDrawActivity.SavedCard>>() {}.type
+            val historyList: ArrayList<SingleDrawActivity.SavedCard> = Gson().fromJson(json, type) ?: ArrayList()
+            var addedCount = 0
+
             for (item in packItems) {
                 val data = CardRepository.getCard(item.md5)
                 if (data != null) {
                     try {
-                        // Use local file path directly
-                        val sourceFile = File(item.uri) // uri is actually path now
+                        val sourceFile = File(item.uri)
                         if (sourceFile.exists()) {
-                            val savedCard = SingleDrawActivity.SavedCard(
-                                data.name, data.rarity, data.description, data.atk, data.def,
-                                sourceFile.absolutePath, System.currentTimeMillis()
-                            )
-                            addToHistory(savedCard)
+                            // Check for duplicates in library based on image path (since Packs reuse local files based on MD5)
+                            val isDuplicate = historyList.any { it.imagePath == sourceFile.absolutePath }
+
+                            if (!isDuplicate) {
+                                val savedCard = SingleDrawActivity.SavedCard(
+                                    data.name, data.rarity, data.description, data.atk, data.def,
+                                    sourceFile.absolutePath, System.currentTimeMillis()
+                                )
+                                historyList.add(0, savedCard)
+                                addedCount++
+                            }
                         }
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
                 }
             }
-            runOnUiThread {
-                Toast.makeText(this, "Cards added to Library!", Toast.LENGTH_SHORT).show()
+
+            if (addedCount > 0) {
+                prefs.edit().putString("history", Gson().toJson(historyList)).apply()
+                runOnUiThread {
+                    Toast.makeText(this, "$addedCount new cards added to Library!", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                 runOnUiThread {
+                    Toast.makeText(this, "No new cards to add.", Toast.LENGTH_SHORT).show()
+                }
             }
         }
-    }
-
-    private fun addToHistory(card: SingleDrawActivity.SavedCard) {
-        val prefs = getSharedPreferences("card_library", Context.MODE_PRIVATE)
-        val json = prefs.getString("history", "[]")
-        val type = object : TypeToken<ArrayList<SingleDrawActivity.SavedCard>>() {}.type
-        val list: ArrayList<SingleDrawActivity.SavedCard> = Gson().fromJson(json, type) ?: ArrayList()
-        list.add(0, card)
-        prefs.edit().putString("history", Gson().toJson(list)).apply()
     }
 
     private fun setupGrid() {

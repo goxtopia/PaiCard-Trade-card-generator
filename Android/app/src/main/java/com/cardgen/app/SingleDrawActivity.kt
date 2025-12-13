@@ -231,13 +231,15 @@ class SingleDrawActivity : AppCompatActivity() {
                     CardRepository.saveCard(this, md5, cardData)
                 }
 
-                // 2. Save Card (on BG thread)
-                saveCardToLibrary(cardData, selectedImageBitmap!!)
+                // 2. Save Card (on BG thread) - Only if NOT from cache (duplicate prevention)
+                if (!fromCache) {
+                    saveCardToLibrary(cardData, selectedImageBitmap!!)
+                }
 
                 mainHandler.post {
                     setLoading(false)
                     renderCardNative(cardData!!)
-                    statusText.text = if (fromCache) "Card Loaded from Cache!" else "Card Generated & Saved!"
+                    statusText.text = if (fromCache) "Card Loaded (Duplicate Skipped)" else "Card Generated & Saved!"
                 }
 
             } catch (e: Exception) {

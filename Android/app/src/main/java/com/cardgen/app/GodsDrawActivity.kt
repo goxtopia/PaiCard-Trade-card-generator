@@ -216,8 +216,10 @@ class GodsDrawActivity : AppCompatActivity() {
                     CardRepository.saveCard(this, md5, data)
                 }
 
-                // Save history entry (even if cached, we record the "draw")
-                saveCardToLibrary(data!!, item.bitmap!!)
+                // Save history entry (only if NOT cached, prevent duplicates in lib)
+                if (!fromCache) {
+                    saveCardToLibrary(data!!, item.bitmap!!)
+                }
 
                 mainHandler.post {
                     item.cardData = data
