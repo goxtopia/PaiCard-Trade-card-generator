@@ -30,7 +30,7 @@
             android:id="@+id/packItem"
             android:layout_width="200dp"
             android:layout_height="300dp"
-            android:background="@drawable/bg_card_pack"
+            android:background="@drawable/card_back"
             android:clickable="true"
             android:focusable="true"
             android:elevation="10dp">

@@ -11,7 +11,7 @@
         android:id="@+id/ivPackIcon"
         android:layout_width="60dp"
         android:layout_height="90dp"
-        android:src="@drawable/bg_card_pack"
+        android:src="@drawable/card_back"
         android:scaleType="fitCenter"/>
 
     <LinearLayout

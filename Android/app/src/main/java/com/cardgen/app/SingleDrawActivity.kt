@@ -230,7 +230,7 @@ class SingleDrawActivity : AppCompatActivity() {
                 e.printStackTrace()
                 mainHandler.post {
                     setLoading(false)
-                    Toast.makeText(this@MainActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@SingleDrawActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
                     statusText.text = "Error: ${e.message}"
                 }
             }
