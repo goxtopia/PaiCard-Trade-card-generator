@@ -100,8 +100,13 @@ class GodsDrawActivity : AppCompatActivity() {
         executor.execute {
             var success = false
             try {
+                val prefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+                val apiUrl = prefs.getString("god_draw_url", "")
+                    .takeIf { !it.isNullOrEmpty() }
+                    ?: "https://api.tcslw.cn/api/img/tbmjx?type=json"
+
                 val request = Request.Builder()
-                    .url("https://api.tcslw.cn/api/img/tbmjx?type=json")
+                    .url(apiUrl)
                     .build()
                 val response = client.newCall(request).execute()
                 val jsonStr = response.body?.string()

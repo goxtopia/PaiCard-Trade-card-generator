@@ -17,6 +17,7 @@ class SettingsActivity : AppCompatActivity() {
         val etApiKey = findViewById<TextInputEditText>(R.id.etApiKey)
         val etModel = findViewById<TextInputEditText>(R.id.etModel)
         val etPrompt = findViewById<TextInputEditText>(R.id.etPrompt)
+        val etGodDrawUrl = findViewById<TextInputEditText>(R.id.etGodDrawUrl)
         val btnSave = findViewById<Button>(R.id.btnSaveSettings)
 
         val prefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
@@ -25,6 +26,7 @@ class SettingsActivity : AppCompatActivity() {
         etApiUrl.setText(prefs.getString("api_url", "https://api.openai.com"))
         etApiKey.setText(prefs.getString("api_key", ""))
         etModel.setText(prefs.getString("model", "gpt-4o-mini"))
+        etGodDrawUrl.setText(prefs.getString("god_draw_url", ""))
 
         val defaultPrompt = "Create a funny and creative name and ability description for a trading card based on this image. Name and Description should be in Chinese (Chinese). The description should be short (max 2 sentences)."
         etPrompt.setText(prefs.getString("custom_prompt", defaultPrompt))
@@ -34,6 +36,7 @@ class SettingsActivity : AppCompatActivity() {
             editor.putString("api_url", etApiUrl.text.toString().trim())
             editor.putString("api_key", etApiKey.text.toString().trim())
             editor.putString("model", etModel.text.toString().trim())
+            editor.putString("god_draw_url", etGodDrawUrl.text.toString().trim())
             editor.putString("custom_prompt", etPrompt.text.toString().trim())
             editor.apply()
 
