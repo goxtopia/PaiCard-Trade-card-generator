@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#1a1a1a"
+    android:background="?attr/colorSurface"
     android:padding="32dp"
     android:gravity="center">
 
@@ -11,48 +12,57 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Card Generator"
-        android:textColor="#FFFFFF"
-        android:textSize="32sp"
-        android:textStyle="bold"
+        android:textColor="?attr/colorOnSurface"
+        style="?attr/textAppearanceDisplayMedium"
         android:layout_marginBottom="48dp"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSingleDraw"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="64dp"
         android:text="Single Draw"
-        android:padding="16dp"
-        android:layout_marginBottom="16dp"/>
+        app:icon="@android:drawable/ic_menu_edit"
+        app:iconGravity="textStart"
+        android:layout_marginBottom="16dp"
+        style="@style/Widget.Material3.Button.TonalButton"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnBatchDraw"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Batch Draw"
-        android:padding="16dp"
-        android:layout_marginBottom="16dp"/>
+        android:layout_height="64dp"
+        android:text="My Packs"
+        app:icon="@android:drawable/ic_menu_gallery"
+        app:iconGravity="textStart"
+        android:layout_marginBottom="16dp"
+        style="@style/Widget.Material3.Button.TonalButton"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnGodsDraw"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="64dp"
         android:text="God's Draw"
-        android:padding="16dp"
-        android:layout_marginBottom="16dp"/>
+        app:icon="@android:drawable/ic_menu_view"
+        app:iconGravity="textStart"
+        android:layout_marginBottom="16dp"
+        style="@style/Widget.Material3.Button.TonalButton"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnLibrary"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="64dp"
         android:text="Card Library"
-        android:padding="16dp"
-        android:layout_marginBottom="16dp"/>
+        app:icon="@android:drawable/ic_menu_save"
+        app:iconGravity="textStart"
+        android:layout_marginBottom="16dp"
+        style="@style/Widget.Material3.Button.TonalButton"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSettings"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="64dp"
         android:text="Settings"
-        android:padding="16dp"/>
+        app:icon="@android:drawable/ic_menu_preferences"
+        app:iconGravity="textStart"
+        style="@style/Widget.Material3.Button.OutlinedButton"/>
 
 </LinearLayout>
