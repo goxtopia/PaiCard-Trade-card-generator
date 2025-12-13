@@ -34,6 +34,7 @@
         <activity android:name=".BatchDrawActivity" />
         <activity android:name=".LibraryActivity" />
         <activity android:name=".CardDetailActivity" />
+        <activity android:name=".PackOpeningActivity" />
         <activity android:name=".SettingsActivity" />
 
         <service android:name=".CardGenerationService"
