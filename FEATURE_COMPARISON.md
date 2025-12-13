@@ -15,17 +15,21 @@ This document tracks the synchronization status of features between the original
 | **Visuals & UI** | **Card Rendering** | ✅ HTML/CSS | ✅ Native Views (XML) | **Functional** | Transitioned to Native UI for better performance and future 3D capabilities. |
 | | **Rarity Colors** | ✅ Yes | ✅ Yes | **Synced** | N, R, SR, SSR, UR colors match using Native Drawables. |
 | | **Theme Colors** | ✅ Yes | ✅ Yes | **Synced** | (e.g., Bronze, Gold, Galaxy) logic ported to Kotlin. |
-| | **Visual Effects** | ✅ Yes | ⚠️ Basic | *Partial* | Basic overlays implemented natively; complex CSS animations (Lightning, Holographic) need future native implementation. |
+| | **Visual Effects** | ✅ Yes | ✅ Yes | **Synced** | Android now supports "breathing" animations for High Rarity cards. |
 | | **Summoning Animation**| ✅ Yes | ✅ Yes | **Synced** | Basic Scale/Fade animation implemented natively. |
-| | **3D Flip Interaction**| ✅ Yes | ❌ No | *Different* | Android displays the generated card face-up immediately. |
-| **Advanced Features** | **Card Library/History** | ✅ Yes | ❌ No | *Missing* | Android does not persist generated cards (MVP scope). |
+| | **3D Flip Interaction**| ✅ Yes | ✅ Yes | **Synced** | Android implements 3D rotation with card back. |
+| **Advanced Features** | **Card Library/History** | ✅ Yes | ✅ Yes | **Synced** | Android now persists generated cards (MVP scope). |
 | | **Batch Generation** | ✅ Yes | ❌ No | *Missing* | Single image generation only on Android. |
 | | **Card Packs** | ✅ Yes | ❌ No | *Missing* | |
-| | **God's Draw** | ✅ Yes | ❌ No | *Missing* | |
-| | **Card Back Selection**| ✅ Yes | ❌ No | *Missing* | Android uses default card back (hidden). |
+| | **God's Draw** | ✅ Yes | ✅ Yes | **Synced** | Implemented fetching from random image API. |
+| | **Card Back Selection**| ✅ Yes | ⚠️ Partial | *Partial* | Android uses a default card back for flip animations. |
 
 ## Summary
 
 The **Android Version** successfully replicates the **Core Card Generation** experience. It allows users to take a photo or pick an image, configure their own AI backend, and generate a trading card with the exact same high-quality visuals (glows, rarities, themes) as the web version.
 
-Advanced features like the **Card Database/Library**, **Packs System**, and **Batch Processing** are currently exclusive to the Server-based Web version, as they require persistent storage and background processing that were out of scope for the initial standalone Android client.
+**Update:**
+*   **God's Draw** has been added, allowing users to fetch random images and generate cards instantly.
+*   **Card Library** is now available, saving generated cards locally.
+*   **3D Effects** including card flipping and breathing animations are implemented.
+*   **Card Packs** and **Batch Processing** are still exclusive to the Web version.
