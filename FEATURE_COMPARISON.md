@@ -12,11 +12,11 @@ This document tracks the synchronization status of features between the original
 | | **Custom Model Name** | ✅ Yes (Settings) | ✅ Yes (Settings UI) | **Synced** | |
 | | **Custom API URL** | ✅ Yes (Settings) | ✅ Yes (Settings UI) | **Synced** | Allows local LLMs/Alternative providers. |
 | | **Custom Prompt** | ✅ Yes (Granular Fields) | ✅ Yes (Unified Block) | **Synced** | Android uses a single prompt block for efficiency/mobile latency. |
-| **Visuals & UI** | **Card Rendering** | ✅ HTML/CSS | ✅ WebView (HTML/CSS) | **Synced** | Reuses `style.css` for 1:1 visual match. |
-| | **Rarity Colors** | ✅ Yes | ✅ Yes | **Synced** | N, R, SR, SSR, UR colors match. |
+| **Visuals & UI** | **Card Rendering** | ✅ HTML/CSS | ✅ Native Views (XML) | **Functional** | Transitioned to Native UI for better performance and future 3D capabilities. |
+| | **Rarity Colors** | ✅ Yes | ✅ Yes | **Synced** | N, R, SR, SSR, UR colors match using Native Drawables. |
 | | **Theme Colors** | ✅ Yes | ✅ Yes | **Synced** | (e.g., Bronze, Gold, Galaxy) logic ported to Kotlin. |
-| | **Visual Effects** | ✅ Yes | ✅ Yes | **Synced** | (e.g., Lightning, Holographic) CSS animations work in WebView. |
-| | **Summoning Animation**| ✅ Yes | ✅ Yes | **Synced** | Added `is-summoning` trigger to Android view. |
+| | **Visual Effects** | ✅ Yes | ⚠️ Basic | *Partial* | Basic overlays implemented natively; complex CSS animations (Lightning, Holographic) need future native implementation. |
+| | **Summoning Animation**| ✅ Yes | ✅ Yes | **Synced** | Basic Scale/Fade animation implemented natively. |
 | | **3D Flip Interaction**| ✅ Yes | ❌ No | *Different* | Android displays the generated card face-up immediately. |
 | **Advanced Features** | **Card Library/History** | ✅ Yes | ❌ No | *Missing* | Android does not persist generated cards (MVP scope). |
 | | **Batch Generation** | ✅ Yes | ❌ No | *Missing* | Single image generation only on Android. |

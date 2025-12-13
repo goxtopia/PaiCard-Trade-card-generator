@@ -7,7 +7,7 @@ This is a native Android version of the Card Generator application. It functions
 *   **Standalone**: Does not require the Python server to run.
 *   **Custom Config**: Set your own API Endpoint, API Key, and Model Name in Settings.
 *   **Native Performance**: Uses Native Android logic for image processing and networking.
-*   **Visuals**: Reuses the high-quality CSS/HTML card rendering via a local WebView.
+*   **Visuals**: Uses Native Android Views (ConstraintLayout, GradientDrawables) for high performance and future 3D/Animation extensibility.
 
 ## How to Build
 
