@@ -4,7 +4,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#1a1a1a"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:padding="32dp">
+
+    <com.cardgen.app.ParticleView
+        android:id="@+id/particleView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="visible"/>
 
     <!-- Centered Card Container -->
     <androidx.cardview.widget.CardView
