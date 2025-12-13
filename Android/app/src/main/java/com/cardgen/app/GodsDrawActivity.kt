@@ -4,9 +4,13 @@ import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,7 +22,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -64,8 +68,8 @@ class GodsDrawActivity : AppCompatActivity() {
         statusText = findViewById(R.id.statusText)
         recyclerView = findViewById(R.id.recyclerView)
 
-        // 2 Columns
-        recyclerView.layoutManager = GridLayoutManager(this, 2)
+        // 1 Column
+        recyclerView.layoutManager = LinearLayoutManager(this)
         adapter = GodsDrawAdapter(cardItems) { position ->
             flipCard(position)
         }
@@ -190,6 +194,48 @@ class GodsDrawActivity : AppCompatActivity() {
         }
     }
 
+    private fun triggerVibration(rarity: String) {
+        val r = rarity.uppercase()
+        val duration = when {
+            r.contains("UR") -> 500L
+            r.contains("SSR") -> 300L
+            r.contains("SR") -> 150L
+            else -> 50L
+        }
+
+        val amplitude = when {
+            r.contains("UR") -> 255
+            r.contains("SSR") -> 200
+            r.contains("SR") -> 150
+            else -> 80
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            val vibrator = vibratorManager.defaultVibrator
+            vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude))
+        } else {
+            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude))
+            } else {
+                vibrator.vibrate(duration)
+            }
+        }
+    }
+
+    private fun showParticles(holder: GodsDrawAdapter.ViewHolder, rarity: String) {
+        holder.particleView.visibility = View.VISIBLE
+        val r = rarity.uppercase()
+        when {
+            r.contains("UR") -> holder.particleView.setConfig(ParticleView.ParticleType.COSMIC)
+            r.contains("SSR") -> holder.particleView.setConfig(ParticleView.ParticleType.FLAME)
+            r.contains("SR") -> holder.particleView.setConfig(ParticleView.ParticleType.LIGHTNING)
+            r.contains("R") -> holder.particleView.setConfig(ParticleView.ParticleType.SPARKLE)
+            else -> holder.particleView.setConfig(ParticleView.ParticleType.DUST)
+        }
+    }
+
     private fun generateCardData(position: Int, item: GodCardItem) {
         item.isLoading = true
         adapter.notifyItemChanged(position)
@@ -223,6 +269,10 @@ class GodsDrawActivity : AppCompatActivity() {
                     item.cardData = data
                     item.isLoading = false
                     adapter.notifyItemChanged(position) // Update UI with text
+
+                    if (data != null) {
+                        triggerVibration(data.rarity)
+                    }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -270,6 +320,7 @@ class GodsDrawActivity : AppCompatActivity() {
             val cardFlipContainer: FrameLayout = view.findViewById(R.id.cardFlipContainer)
             val cardBack: ImageView = view.findViewById(R.id.cardBack)
             val cardFront: View = view.findViewById(R.id.cardFront) // Include layout
+            val particleView: ParticleView = view.findViewById(R.id.particleView)
 
             // Front Views
             val ivArt: ImageView = view.findViewById(R.id.ivCardArt)
@@ -320,6 +371,9 @@ class GodsDrawActivity : AppCompatActivity() {
                     bgDrawable.setColor(ContextCompat.getColor(holder.itemView.context, bg))
                     bgDrawable.setStroke(4, ContextCompat.getColor(holder.itemView.context, border))
                     holder.cardFront.background = bgDrawable
+
+                    // Show particles if we have data
+                    showParticles(holder, item.cardData!!.rarity)
                 } else {
                     holder.tvName.text = "Loading..."
                     holder.tvDesc.text = "Analyzing card data..."
@@ -329,6 +383,7 @@ class GodsDrawActivity : AppCompatActivity() {
                 holder.cardFlipContainer.rotationY = 0f
                 holder.cardBack.visibility = View.VISIBLE
                 holder.cardFront.visibility = View.GONE
+                holder.particleView.visibility = View.GONE
             }
 
             holder.itemView.setOnClickListener {

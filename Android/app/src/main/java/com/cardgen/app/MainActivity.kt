@@ -173,7 +173,16 @@ class MainActivity : AppCompatActivity() {
 
             if (rotationInDegrees == 0) return file
 
-            val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return file
+            // Use inSampleSize to prevent OOM
+            val options = BitmapFactory.Options()
+            options.inJustDecodeBounds = true
+            BitmapFactory.decodeFile(file.absolutePath, options)
+
+            // Calculate inSampleSize
+            options.inSampleSize = calculateInSampleSize(options, 2048, 2048)
+            options.inJustDecodeBounds = false
+
+            val bitmap = BitmapFactory.decodeFile(file.absolutePath, options) ?: return file
             val matrix = Matrix()
             matrix.preRotate(rotationInDegrees.toFloat())
 
@@ -196,5 +205,21 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
             return file
         }
+    }
+
+    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val (height: Int, width: Int) = options.run { outHeight to outWidth }
+        var inSampleSize = 1
+
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight: Int = height / 2
+            val halfWidth: Int = width / 2
+
+            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+
+        return inSampleSize
     }
 }

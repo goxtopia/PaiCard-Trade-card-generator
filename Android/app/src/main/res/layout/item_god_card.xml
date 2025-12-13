@@ -2,8 +2,16 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="260dp"
-    android:padding="4dp">
+    android:layout_height="600dp"
+    android:clipChildren="false"
+    android:padding="16dp">
+
+    <com.cardgen.app.ParticleView
+        android:id="@+id/particleView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        android:translationZ="10dp"/>
 
     <FrameLayout
         android:id="@+id/cardFlipContainer"
@@ -53,18 +61,20 @@
                         android:layout_weight="1"
                         android:text="Name"
                         android:textColor="#000000"
-                        android:textSize="10sp"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
                         android:maxLines="1"/>
 
                     <TextView
                         android:id="@+id/tvCardAttribute"
-                        android:layout_width="16dp"
-                        android:layout_height="16dp"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
                         android:background="@drawable/bg_info_box"
                         android:gravity="center"
                         android:text="N"
                         android:textColor="#000000"
-                        android:textSize="8sp"/>
+                        android:textStyle="bold"
+                        android:textSize="14sp"/>
                 </LinearLayout>
 
                 <!-- Art -->
@@ -72,23 +82,23 @@
                     android:id="@+id/ivCardArt"
                     android:layout_width="0dp"
                     android:layout_height="0dp"
-                    android:scaleType="fitCenter"
+                    android:scaleType="centerCrop"
                     android:background="#000000"
                     app:layout_constraintTop_toBottomOf="@id/headerContainer"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintBottom_toTopOf="@id/infoContainer"
-                    android:layout_marginTop="4dp"
-                    android:layout_marginBottom="4dp"/>
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp"/>
 
                 <!-- Info -->
                 <LinearLayout
                     android:id="@+id/infoContainer"
                     android:layout_width="0dp"
-                    android:layout_height="60dp"
+                    android:layout_height="100dp"
                     android:orientation="vertical"
                     android:background="@drawable/bg_info_box"
-                    android:padding="2dp"
+                    android:padding="8dp"
                     app:layout_constraintBottom_toBottomOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintEnd_toEndOf="parent">
@@ -100,27 +110,32 @@
                         android:layout_weight="1"
                         android:text="..."
                         android:textColor="#000000"
-                        android:textSize="8sp"/>
+                        android:textSize="14sp"
+                        android:lineSpacingMultiplier="1.1"/>
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:gravity="end"
+                        android:layout_marginTop="4dp">
                         <TextView
                             android:id="@+id/tvCardAtk"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="ATK/0"
                             android:textColor="#000000"
-                            android:textSize="8sp"
-                            android:layout_marginEnd="4dp"/>
+                            android:textStyle="bold"
+                            android:textSize="14sp"
+                            android:layout_marginEnd="16dp"/>
                         <TextView
                             android:id="@+id/tvCardDef"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="DEF/0"
                             android:textColor="#000000"
-                            android:textSize="8sp"/>
+                            android:textStyle="bold"
+                            android:textSize="14sp"/>
                     </LinearLayout>
                 </LinearLayout>
 
