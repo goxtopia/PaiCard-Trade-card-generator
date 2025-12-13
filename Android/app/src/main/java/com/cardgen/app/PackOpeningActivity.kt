@@ -30,7 +30,6 @@ class PackOpeningActivity : AppCompatActivity() {
     private lateinit var packContainer: View
     private lateinit var gridContainer: View
     private lateinit var recyclerView: RecyclerView
-    private lateinit var btnSaveAll: Button
 
     private lateinit var adapter: PackGridAdapter
     private var packId: String? = null
@@ -40,20 +39,8 @@ class PackOpeningActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_batch_draw) // Reuse layout?
-        // Wait, activity_batch_draw has specific IDs for Upload/Pack/Grid.
-        // We can reuse it but programmatically set visibility.
-        // Or create new layout. Let's reuse for now but clean up logic.
-        // Actually, previous BatchDrawActivity had complex state.
-        // Let's assume we are using a similar layout structure.
-
-        // Re-inflating the same layout might be confusing if logic differs.
-        // Let's look at activity_batch_draw.xml again.
-        // It has uploadContainer (gone), packContainer (visible initially), gridContainer (gone).
-        // This fits perfectly.
-
-        setContentView(R.layout.activity_batch_draw)
-        supportActionBar?.hide() // Immersive for opening
+        setContentView(R.layout.activity_pack_opening)
+        supportActionBar?.hide()
 
         packId = intent.getStringExtra("packId")
         if (packId == null) {
@@ -72,26 +59,22 @@ class PackOpeningActivity : AppCompatActivity() {
     }
 
     private fun initViews(pack: PackRepository.Pack) {
-        val uploadContainer = findViewById<View>(R.id.uploadContainer)
         packContainer = findViewById(R.id.packContainer)
         gridContainer = findViewById(R.id.gridContainer)
+
         val packItem = findViewById<View>(R.id.packItem)
         val packCount = findViewById<TextView>(R.id.packCountText)
 
-        val gridTitle = findViewById<TextView>(R.id.gridTitle)
-        val btnBack = findViewById<Button>(R.id.btnBackToPacks)
+        val btnBack = findViewById<View>(R.id.btnBackToPacks)
         recyclerView = findViewById(R.id.recyclerView)
 
         // Initial State
-        uploadContainer.visibility = View.GONE
 
         if (pack.status == PackRepository.PackStatus.OPENED) {
-            // Directly show grid
             packContainer.visibility = View.GONE
             gridContainer.visibility = View.VISIBLE
             setupGrid()
         } else {
-            // Show Pack to Open
             packContainer.visibility = View.VISIBLE
             gridContainer.visibility = View.GONE
             packCount.text = "Contains ${packItems.size} Cards"
@@ -112,7 +95,6 @@ class PackOpeningActivity : AppCompatActivity() {
             gridContainer.alpha = 0f
             gridContainer.animate().alpha(1f).setDuration(500).start()
 
-            // Update Status and Save to Library
             PackRepository.updatePackStatus(this, pack.id, PackRepository.PackStatus.OPENED)
             savePackToLibrary()
 
@@ -125,14 +107,6 @@ class PackOpeningActivity : AppCompatActivity() {
             for (item in packItems) {
                 val data = CardRepository.getCard(item.md5)
                 if (data != null) {
-                    // Need to create a file copy for the library list or reference existing?
-                    // Library uses file paths. The cache uses memory/db.
-                    // We need to ensure we have a file in app storage for the library list.
-                    // We can re-use the image from the cache logic or re-save.
-                    // Since we have the URI, we can re-save.
-                    // Or check if cache has bitmap.
-                    // Let's re-read URI and save to local file for consistency.
-
                     try {
                         val bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(android.net.Uri.parse(item.uri)))
                         if (bitmap != null) {
@@ -202,7 +176,7 @@ class PackOpeningActivity : AppCompatActivity() {
         holder.isFlipped = true
     }
 
-    // Adapter (Reused/Simplified)
+    // Adapter
     inner class PackGridAdapter(
         private val items: List<PackRepository.PackItem>,
         private val onItemClick: (PackRepository.PackItem, ViewHolder) -> Unit
@@ -231,12 +205,6 @@ class PackOpeningActivity : AppCompatActivity() {
             val item = items[position]
             val cardData = CardRepository.getCard(item.md5)
 
-            // If pack is already OPENED (e.g. resuming activity), show revealed?
-            // Actually, usually opening animation is once. If revisiting, show all face up?
-            // Let's defaults to face down for suspense, or check state.
-            // For now, simple interaction: Face down initially in this activity session.
-
-            // Set Data
              if (cardData != null) {
                 holder.tvName.text = cardData.name
                 holder.tvRarity.text = cardData.rarity
@@ -244,11 +212,6 @@ class PackOpeningActivity : AppCompatActivity() {
                 holder.tvAtk.text = cardData.atk
                 holder.tvDef.text = cardData.def
 
-                // Art
-                // Since we don't have bitmap passed in, load from URI
-                // Async load in bind is bad, but for MVP...
-                // Use Glide/Picasso in real app. Here use executor?
-                // Or just placeholder for now.
                 try {
                      val bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(android.net.Uri.parse(item.uri)))
                      holder.ivArt.setImageBitmap(bitmap)
