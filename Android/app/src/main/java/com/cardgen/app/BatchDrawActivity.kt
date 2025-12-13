@@ -336,12 +336,8 @@ class BatchDrawActivity : AppCompatActivity() {
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val cardFlipContainer: FrameLayout = view.findViewById(R.id.cardFlipContainer)
             val cardBack: ImageView = view.findViewById(R.id.cardBack)
-            val cardFront: CardView = view.findViewById(R.id.cardFront) // Changed to CardView
-            val innerLayout: ConstraintLayout = view.findViewById(R.id.cardFront) // Need to access ConstraintLayout logic inside? No, view finding inside view
-
-            // Wait, cardFront is now the CardView.
-            // But I need to find the ConstraintLayout inside it to set the background.
-            // Or I can set the background on the inner ConstraintLayout.
+            // Fix: Change from ConstraintLayout to CardView to match XML
+            val cardFront: CardView = view.findViewById(R.id.cardFront)
 
             val ivArt: ImageView = view.findViewById(R.id.ivCardArt)
             val tvName: TextView = view.findViewById(R.id.tvCardName)
@@ -410,13 +406,13 @@ class BatchDrawActivity : AppCompatActivity() {
 
             // To set the background color of the card content, we need to access the child of the CardView
             // which is the ConstraintLayout.
-            val innerLayout = holder.cardFront.getChildAt(0)
-
-            val bgDrawable = ContextCompat.getDrawable(holder.itemView.context, R.drawable.bg_card_base) as GradientDrawable
-            bgDrawable.setColor(ContextCompat.getColor(holder.itemView.context, bgColor))
-            bgDrawable.setStroke(4, ContextCompat.getColor(holder.itemView.context, borderColor))
-
-            innerLayout.background = bgDrawable
+            if (holder.cardFront.childCount > 0) {
+                 val innerLayout = holder.cardFront.getChildAt(0)
+                 val bgDrawable = ContextCompat.getDrawable(holder.itemView.context, R.drawable.bg_card_base) as GradientDrawable
+                 bgDrawable.setColor(ContextCompat.getColor(holder.itemView.context, bgColor))
+                 bgDrawable.setStroke(4, ContextCompat.getColor(holder.itemView.context, borderColor))
+                 innerLayout.background = bgDrawable
+            }
 
             // Animations for High Rarity
             if (r.contains("SSR") || r.contains("UR")) {
