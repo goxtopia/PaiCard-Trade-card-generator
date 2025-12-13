@@ -30,7 +30,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:background="#E6FFFFFF"
+                android:background="@drawable/bg_header_rounded"
                 android:padding="6dp"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -60,12 +60,13 @@
             </LinearLayout>
 
             <!-- Art -->
-            <ImageView
+            <com.google.android.material.image.ShapeableImageView
                 android:id="@+id/ivCardArt"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
-                android:scaleType="fitCenter"
+                android:scaleType="centerCrop"
                 android:background="#000000"
+                app:shapeAppearanceOverlay="@style/RoundedCornerImage"
                 app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintTop_toBottomOf="@id/headerContainer"
                 app:layout_constraintStart_toStartOf="parent"
