@@ -49,6 +49,11 @@ class MainActivity : AppCompatActivity() {
         CardRepository.init(this)
         PackRepository.init(this)
 
+        // Ensure service is running and checking for pending packs
+        val resumeIntent = Intent(this, CardGenerationService::class.java)
+        resumeIntent.action = CardGenerationService.ACTION_RESUME_PENDING
+        startService(resumeIntent)
+
         findViewById<Button>(R.id.btnSnap).setOnClickListener {
             checkCameraPermissionAndSnap()
         }

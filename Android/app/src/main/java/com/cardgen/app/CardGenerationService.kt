@@ -22,6 +22,7 @@ class CardGenerationService : Service() {
     companion object {
         const val CHANNEL_ID = "CardGenChannel"
         const val ACTION_PROCESS_PACK = "com.cardgen.app.action.PROCESS_PACK"
+        const val ACTION_RESUME_PENDING = "com.cardgen.app.action.RESUME_PENDING"
         const val ACTION_PACK_UPDATED = "com.cardgen.app.action.PACK_UPDATED" // New broadcast for Pack updates
 
         const val EXTRA_PACK_ID = "extra_pack_id"
@@ -45,25 +46,62 @@ class CardGenerationService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_PROCESS_PACK) {
-            val packId = intent.getStringExtra(EXTRA_PACK_ID)
+        when (intent?.action) {
+            ACTION_PROCESS_PACK -> {
+                val packId = intent.getStringExtra(EXTRA_PACK_ID)
 
-            if (packId != null) {
-                val pack = PackRepository.getPack(packId)
-                if (pack != null) {
-                    // Queue all items in the pack
-                    for (item in pack.items) {
-                        // Only queue if not already done
-                        if (!CardRepository.hasCard(item.md5)) {
-                            queue.add(Task(packId, item))
-                        }
+                if (packId != null) {
+                    val pack = PackRepository.getPack(packId)
+                    if (pack != null) {
+                        // Queue all items in the pack
+                        queuePackItems(pack)
+                        // Trigger initial check/start
+                        processNext()
                     }
-                    // Trigger initial check/start
-                    processNext()
                 }
+            }
+            ACTION_RESUME_PENDING -> {
+                resumePendingPacks()
             }
         }
         return START_REDELIVER_INTENT
+    }
+
+    private fun resumePendingPacks() {
+        val packs = PackRepository.getPacks()
+        var hasNewTasks = false
+        for (pack in packs) {
+            if (pack.status == PackRepository.PackStatus.PROCESSING) {
+                if (queuePackItems(pack)) {
+                    hasNewTasks = true
+                }
+            }
+        }
+        if (hasNewTasks) {
+            processNext()
+        }
+    }
+
+    private fun queuePackItems(pack: PackRepository.Pack): Boolean {
+        var added = false
+        for (item in pack.items) {
+            // Only queue if not already done and not already in queue
+            if (!CardRepository.hasCard(item.md5)) {
+                // Check if task is already in queue to avoid duplicates
+                val alreadyQueued = queue.any { it.packId == pack.id && it.item.md5 == item.md5 }
+                if (!alreadyQueued) {
+                    queue.add(Task(pack.id, item))
+                    added = true
+                }
+            } else {
+                 // Even if card exists, check if pack status needs update (e.g. was just finished but status not saved)
+                 // This will be handled by processNext()'s completion check if any item triggers it,
+                 // but what if ALL items are done but status is PROCESSING?
+                 // We should probably check readiness here too.
+                 PackRepository.checkPackReadiness(this, pack.id)
+            }
+        }
+        return added
     }
 
     private fun processNext() {
