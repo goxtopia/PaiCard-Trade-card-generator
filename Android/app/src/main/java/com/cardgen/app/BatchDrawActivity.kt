@@ -23,6 +23,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.cardview.widget.CardView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
@@ -335,7 +336,12 @@ class BatchDrawActivity : AppCompatActivity() {
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val cardFlipContainer: FrameLayout = view.findViewById(R.id.cardFlipContainer)
             val cardBack: ImageView = view.findViewById(R.id.cardBack)
-            val cardFront: ConstraintLayout = view.findViewById(R.id.cardFront)
+            val cardFront: CardView = view.findViewById(R.id.cardFront) // Changed to CardView
+            val innerLayout: ConstraintLayout = view.findViewById(R.id.cardFront) // Need to access ConstraintLayout logic inside? No, view finding inside view
+
+            // Wait, cardFront is now the CardView.
+            // But I need to find the ConstraintLayout inside it to set the background.
+            // Or I can set the background on the inner ConstraintLayout.
 
             val ivArt: ImageView = view.findViewById(R.id.ivCardArt)
             val tvName: TextView = view.findViewById(R.id.tvCardName)
@@ -347,7 +353,6 @@ class BatchDrawActivity : AppCompatActivity() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            // Reusing the same layout as God's Draw as it fits the grid need perfectly
             val view = LayoutInflater.from(parent.context).inflate(R.layout.item_god_card, parent, false)
             return ViewHolder(view)
         }
@@ -355,7 +360,6 @@ class BatchDrawActivity : AppCompatActivity() {
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val item = items[position]
 
-            // Clear animations to avoid recycling issues
             holder.itemView.clearAnimation()
 
             if (item.isFlipped) {
@@ -404,10 +408,15 @@ class BatchDrawActivity : AppCompatActivity() {
                 else -> Pair(R.color.rarity_n_bg, R.color.rarity_n_border)
             }
 
+            // To set the background color of the card content, we need to access the child of the CardView
+            // which is the ConstraintLayout.
+            val innerLayout = holder.cardFront.getChildAt(0)
+
             val bgDrawable = ContextCompat.getDrawable(holder.itemView.context, R.drawable.bg_card_base) as GradientDrawable
             bgDrawable.setColor(ContextCompat.getColor(holder.itemView.context, bgColor))
             bgDrawable.setStroke(4, ContextCompat.getColor(holder.itemView.context, borderColor))
-            holder.cardFront.background = bgDrawable
+
+            innerLayout.background = bgDrawable
 
             // Animations for High Rarity
             if (r.contains("SSR") || r.contains("UR")) {
