@@ -14,11 +14,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.File
+import java.util.concurrent.Executors
+import java.util.concurrent.ExecutorService
 
 class LibraryActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: LibraryAdapter
+    private lateinit var imageExecutor: ExecutorService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,12 +29,20 @@ class LibraryActivity : AppCompatActivity() {
         supportActionBar?.title = "Card Library"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
+        // Single pool for image loading
+        imageExecutor = Executors.newFixedThreadPool(4)
+
         recyclerView = findViewById(R.id.recyclerView)
         recyclerView.layoutManager = GridLayoutManager(this, 3) // 3 Columns
 
         val cards = loadCards()
         adapter = LibraryAdapter(cards)
         recyclerView.adapter = adapter
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        imageExecutor.shutdownNow()
     }
 
     override fun onSupportNavigateUp(): Boolean {
@@ -67,8 +78,8 @@ class LibraryActivity : AppCompatActivity() {
 
             val imgFile = File(item.imagePath)
             if (imgFile.exists()) {
-                // Async Load
-                java.util.concurrent.Executors.newSingleThreadExecutor().execute {
+                // Async Load using shared executor
+                imageExecutor.execute {
                     // Downsample
                     val options = BitmapFactory.Options()
                     options.inJustDecodeBounds = true
