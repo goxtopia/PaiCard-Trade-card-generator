@@ -1,10 +1,32 @@
-<resources>
-    <style name="Theme.CardGenerator" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.CardGenerator" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <!-- Primary brand color. -->
         <item name="colorPrimary">#3498db</item>
-        <item name="colorPrimaryVariant">#2980b9</item>
-        <item name="colorOnPrimary">#ffffff</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorPrimaryContainer">#D1E4FF</item>
+        <item name="colorOnPrimaryContainer">#001D36</item>
+
+        <!-- Secondary brand color. -->
         <item name="colorSecondary">#e74c3c</item>
-        <item name="colorOnSecondary">#000000</item>
-        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+        <item name="colorSecondaryContainer">#FFDAD6</item>
+        <item name="colorOnSecondaryContainer">#410002</item>
+
+        <!-- Tertiary brand color (using Gold for rarity/high value) -->
+        <item name="colorTertiary">#f1c40f</item>
+        <item name="colorOnTertiary">#FFFFFF</item>
+        <item name="colorTertiaryContainer">#FFF0B0</item>
+        <item name="colorOnTertiaryContainer">#231B00</item>
+
+        <!-- Backgrounds -->
+        <item name="android:colorBackground">#1a1a1a</item>
+        <item name="colorSurface">#2c3e50</item>
+        <item name="colorOnSurface">#ECF0F1</item>
+
+        <!-- Status Bar -->
+        <item name="android:statusBarColor">#1a1a1a</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>
