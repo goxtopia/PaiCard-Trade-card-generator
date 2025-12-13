@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Rarity Colors -->
+    <color name="rarity_n_bg">#c07838</color>
+    <color name="rarity_n_border">#3d3d3d</color>
+
+    <color name="rarity_r_bg">#95a5a6</color>
+    <color name="rarity_r_border">#7f8c8d</color>
+
+    <color name="rarity_sr_bg">#f39c12</color>
+    <color name="rarity_sr_border">#d35400</color>
+
+    <color name="rarity_ssr_bg">#8e44ad</color>
+    <color name="rarity_ssr_border">#2c3e50</color>
+
+    <color name="rarity_ur_bg">#2c3e50</color>
+    <color name="rarity_ur_border">#f1c40f</color>
+
+    <!-- Theme Colors -->
+    <color name="theme_gray">#7f8c8d</color>
+    <color name="theme_pale_blue">#aab7b8</color>
+    <color name="theme_pale_green">#a2b9bc</color>
+
+    <color name="theme_bronze">#cd7f32</color>
+    <color name="theme_silver">#bdc3c7</color>
+    <color name="theme_steel">#778899</color>
+
+    <color name="theme_gold">#f1c40f</color>
+    <color name="theme_orange">#e67e22</color>
+    <color name="theme_crimson">#c0392b</color>
+
+    <color name="theme_purple">#9b59b6</color>
+    <color name="theme_magenta">#dda0dd</color>
+    <color name="theme_deep_blue">#34495e</color>
+
+    <!-- UI Colors -->
+    <color name="card_text_dark">#000000</color>
+    <color name="card_text_light">#FFFFFF</color>
+    <color name="card_info_bg">#F2FFFFFF</color>
+</resources>

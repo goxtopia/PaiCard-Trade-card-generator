@@ -7,6 +7,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -16,14 +18,17 @@ import android.provider.MediaStore
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.webkit.WebSettings
-import android.webkit.WebView
+import android.view.animation.AnimationUtils
 import android.widget.Button
+import android.widget.FrameLayout
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import org.json.JSONObject
@@ -39,7 +44,17 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnGenerate: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var statusText: TextView
-    private lateinit var webView: WebView
+
+    // Native Card Views
+    private lateinit var cardContainer: ConstraintLayout
+    private lateinit var tvCardName: TextView
+    private lateinit var tvCardAttribute: TextView
+    private lateinit var ivCardArt: ImageView
+    private lateinit var tvCardType: TextView
+    private lateinit var tvCardDesc: TextView
+    private lateinit var tvCardAtk: TextView
+    private lateinit var tvCardDef: TextView
+    private lateinit var viewEffectOverlay: View
 
     private var selectedImageBitmap: Bitmap? = null
     private val vlmService = VLMService()
@@ -60,13 +75,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        btnPickImage = findViewById(R.id.btnPickImage)
-        btnGenerate = findViewById(R.id.btnGenerate)
-        progressBar = findViewById(R.id.progressBar)
-        statusText = findViewById(R.id.statusText)
-        webView = findViewById(R.id.cardWebView)
-
-        setupWebView()
+        bindViews()
 
         btnPickImage.setOnClickListener {
             checkPermissionsAndPickImage()
@@ -77,13 +86,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupWebView() {
-        webView.settings.javaScriptEnabled = true
-        webView.settings.allowFileAccess = true
-        webView.settings.allowContentAccess = true
-        // Allow loading from assets
-        webView.loadUrl("file:///android_asset/www/android_view.html")
-        webView.setBackgroundColor(0x00000000) // Transparent
+    private fun bindViews() {
+        btnPickImage = findViewById(R.id.btnPickImage)
+        btnGenerate = findViewById(R.id.btnGenerate)
+        progressBar = findViewById(R.id.progressBar)
+        statusText = findViewById(R.id.statusText)
+
+        cardContainer = findViewById(R.id.cardContainer)
+        tvCardName = findViewById(R.id.tvCardName)
+        tvCardAttribute = findViewById(R.id.tvCardAttribute)
+        ivCardArt = findViewById(R.id.ivCardArt)
+        tvCardType = findViewById(R.id.tvCardType)
+        tvCardDesc = findViewById(R.id.tvCardDesc)
+        tvCardAtk = findViewById(R.id.tvCardAtk)
+        tvCardDef = findViewById(R.id.tvCardDef)
+        viewEffectOverlay = findViewById(R.id.viewEffectOverlay)
+
+        // Hide card initially or set empty state
+        cardContainer.visibility = View.INVISIBLE
     }
 
     private fun checkPermissionsAndPickImage() {
@@ -112,8 +132,9 @@ class MainActivity : AppCompatActivity() {
             btnGenerate.isEnabled = true
             statusText.text = "Image Selected"
 
-            // Show preview in WebView (optional, or just wait for generation)
-            // For now, we wait for generate.
+            // Show preview in ImageView
+            ivCardArt.setImageBitmap(selectedImageBitmap)
+            cardContainer.visibility = View.VISIBLE
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to load image", Toast.LENGTH_SHORT).show()
         }
@@ -141,28 +162,9 @@ class MainActivity : AppCompatActivity() {
                 // 1. Analyze Image
                 val cardData = vlmService.analyzeImage(selectedImageBitmap!!, apiKey!!, apiUrl!!, model!!, customPrompt!!)
 
-                // 2. Prepare Display Data
-                val displayJson = JSONObject()
-                displayJson.put("name", cardData.name)
-                displayJson.put("description", cardData.description)
-                displayJson.put("atk", cardData.atk)
-                displayJson.put("def", cardData.def)
-                displayJson.put("rarity", cardData.rarity)
-
-                // Add visuals
-                val (effect, theme) = getVisuals(cardData.rarity)
-                displayJson.put("effect_type", effect)
-                displayJson.put("color_theme", theme)
-
-                // Convert Bitmap to Data URI for WebView
-                val base64Img = bitmapToDataUri(selectedImageBitmap!!)
-                displayJson.put("image_data", base64Img)
-
-                val jsonString = displayJson.toString()
-
                 mainHandler.post {
                     setLoading(false)
-                    webView.evaluateJavascript("javascript:renderCard('$jsonString')", null)
+                    renderCardNative(cardData)
                     statusText.text = "Card Generated!"
                 }
 
@@ -177,44 +179,72 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun getVisuals(rarity: String): Pair<String, String> {
-        // Simple logic based on app.py
-        val r = rarity.uppercase()
-        val random = Random()
+    private fun renderCardNative(data: VLMService.CardData) {
+        // Set Text
+        tvCardName.text = data.name
+        tvCardDesc.text = data.description
+        tvCardAtk.text = data.atk
+        tvCardDef.text = data.def
+        tvCardAttribute.text = data.rarity
 
-        var effect = ""
-        var theme = "theme-gray"
-
-        when (r) {
-            "N" -> {
-                 if (random.nextFloat() < 0.1) effect = "effect-dust"
-                 theme = listOf("theme-gray", "theme-pale-blue", "theme-pale-green").random()
-            }
-            "R" -> {
-                 if (random.nextFloat() < 0.3) effect = "effect-shine"
-                 theme = listOf("theme-bronze", "theme-silver", "theme-steel").random()
-            }
-            "SR" -> {
-                 if (random.nextFloat() < 0.6) effect = "effect-holographic"
-                 theme = listOf("theme-gold", "theme-orange", "theme-crimson").random()
-            }
-            "SSR" -> {
-                 if (random.nextFloat() < 0.9) effect = "effect-lightning"
-                 theme = listOf("theme-purple", "theme-magenta", "theme-deep-blue").random()
-            }
-            "UR" -> {
-                 effect = listOf("effect-cosmic", "effect-pulse", "effect-lightning").random()
-                 theme = listOf("theme-rainbow", "theme-black-gold", "theme-galaxy").random()
-            }
+        // Ensure image is set (in case it wasn't already)
+        if (selectedImageBitmap != null) {
+            ivCardArt.setImageBitmap(selectedImageBitmap)
         }
-        return Pair(effect, theme)
+
+        cardContainer.visibility = View.VISIBLE
+
+        // Rarity Colors & Styles
+        val rarity = data.rarity.uppercase()
+        val (bgColorId, borderColorId) = getRarityColors(rarity)
+
+        val bgDrawable = ContextCompat.getDrawable(this, R.drawable.bg_card_base) as GradientDrawable
+        bgDrawable.setColor(ContextCompat.getColor(this, bgColorId))
+        bgDrawable.setStroke(dpToPx(8), ContextCompat.getColor(this, borderColorId))
+
+        cardContainer.background = bgDrawable
+
+        // Simple visual effect based on rarity
+        applyVisualEffects(rarity)
+
+        // Animation (Pop in)
+        cardContainer.alpha = 0f
+        cardContainer.scaleX = 0.8f
+        cardContainer.scaleY = 0.8f
+        cardContainer.animate()
+            .alpha(1f)
+            .scaleX(1f)
+            .scaleY(1f)
+            .setDuration(500)
+            .setInterpolator(android.view.animation.OvershootInterpolator())
+            .start()
     }
 
-    private fun bitmapToDataUri(bitmap: Bitmap): String {
-        val outputStream = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 70, outputStream)
-        val b64 = Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
-        return "data:image/jpeg;base64,$b64"
+    private fun getRarityColors(rarity: String): Pair<Int, Int> {
+        return when {
+            rarity.contains("UR") -> Pair(R.color.rarity_ur_bg, R.color.rarity_ur_border)
+            rarity.contains("SSR") -> Pair(R.color.rarity_ssr_bg, R.color.rarity_ssr_border)
+            rarity.contains("SR") -> Pair(R.color.rarity_sr_bg, R.color.rarity_sr_border)
+            rarity.contains("R") -> Pair(R.color.rarity_r_bg, R.color.rarity_r_border)
+            else -> Pair(R.color.rarity_n_bg, R.color.rarity_n_border)
+        }
+    }
+
+    private fun applyVisualEffects(rarity: String) {
+        viewEffectOverlay.background = null
+
+        if (rarity.contains("SSR") || rarity.contains("UR")) {
+             // Simple shine effect using gradient
+             val shine = GradientDrawable(
+                 GradientDrawable.Orientation.TL_BR,
+                 intArrayOf(Color.TRANSPARENT, Color.parseColor("#40FFFFFF"), Color.TRANSPARENT)
+             )
+             viewEffectOverlay.background = shine
+        }
+    }
+
+    private fun dpToPx(dp: Int): Int {
+        return (dp * resources.displayMetrics.density).toInt()
     }
 
     private fun setLoading(isLoading: Boolean) {
