@@ -108,18 +108,12 @@ class PackOpeningActivity : AppCompatActivity() {
                 val data = CardRepository.getCard(item.md5)
                 if (data != null) {
                     try {
-                        val bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(android.net.Uri.parse(item.uri)))
-                        if (bitmap != null) {
-                            val filename = "card_${System.currentTimeMillis()}_${item.md5.take(5)}.png"
-                            val file = File(filesDir, filename)
-                            val out = FileOutputStream(file)
-                            bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
-                            out.flush()
-                            out.close()
-
+                        // Use local file path directly
+                        val sourceFile = File(item.uri) // uri is actually path now
+                        if (sourceFile.exists()) {
                             val savedCard = SingleDrawActivity.SavedCard(
                                 data.name, data.rarity, data.description, data.atk, data.def,
-                                file.absolutePath, System.currentTimeMillis()
+                                sourceFile.absolutePath, System.currentTimeMillis()
                             )
                             addToHistory(savedCard)
                         }
@@ -213,7 +207,7 @@ class PackOpeningActivity : AppCompatActivity() {
                 holder.tvDef.text = cardData.def
 
                 try {
-                     val bitmap = BitmapFactory.decodeStream(contentResolver.openInputStream(android.net.Uri.parse(item.uri)))
+                     val bitmap = BitmapFactory.decodeFile(item.uri)
                      holder.ivArt.setImageBitmap(bitmap)
                 } catch(e:Exception){}
 

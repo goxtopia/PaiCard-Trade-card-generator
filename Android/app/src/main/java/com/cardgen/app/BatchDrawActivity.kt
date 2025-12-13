@@ -103,25 +103,34 @@ class BatchDrawActivity : AppCompatActivity() {
     }
 
     private fun refreshPacks() {
-        packs = PackRepository.getPacks().sortedByDescending { it.createdAt }
+        packs = PackRepository.getPacks()
+            .filter { it.status != PackRepository.PackStatus.OPENED }
+            .sortedByDescending { it.createdAt }
         adapter.updateList(packs)
     }
 
     private fun createNewPack(uris: List<android.net.Uri>) {
         executor.execute {
-            // 1. Convert Uris to PackItems (Need MD5?)
-            // Actually, we should calculate MD5 here before creating Pack, or create Pack with URIs and let Service calc MD5?
-            // PackRepository expects MD5 to track readiness.
-            // So we must calculate MD5 here.
-
             val items = ArrayList<PackRepository.PackItem>()
             for (uri in uris) {
                  try {
+                     // Copy to internal storage to persist permission
                      val inputStream = contentResolver.openInputStream(uri)
                      val bytes = inputStream?.readBytes()
                      if (bytes != null) {
                          val md5 = CardRepository.calculateMD5(bytes)
-                         items.add(PackRepository.PackItem(uri.toString(), md5))
+
+                         // Save local copy
+                         val filename = "pack_img_${md5}.jpg"
+                         val file = java.io.File(filesDir, filename)
+                         if (!file.exists()) {
+                             java.io.FileOutputStream(file).use { out ->
+                                 out.write(bytes)
+                             }
+                         }
+
+                         // Use local path instead of URI
+                         items.add(PackRepository.PackItem(file.absolutePath, md5))
                      }
                  } catch (e: Exception) {
                      e.printStackTrace()

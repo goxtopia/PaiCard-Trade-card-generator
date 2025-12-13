@@ -130,9 +130,19 @@ class CardGenerationService : Service() {
 
     private fun loadBitmap(uri: Uri): Bitmap? {
         return try {
+            if (uri.scheme == null || uri.scheme == "file") {
+                val path = uri.path
+                if (path != null) {
+                    val file = java.io.File(path)
+                    if (file.exists()) {
+                         return BitmapFactory.decodeFile(path)
+                    }
+                }
+            }
             val inputStream: InputStream? = contentResolver.openInputStream(uri)
             BitmapFactory.decodeStream(inputStream)
         } catch (e: Exception) {
+            e.printStackTrace()
             null
         }
     }
