@@ -92,6 +92,12 @@
                     document.getElementById('cardArt').style.backgroundImage = "url('" + data.image_data + "')";
                 }
 
+                // Trigger Summoning Animation
+                // Remove class then add it back to restart animation
+                cardEl.classList.remove("is-summoning");
+                void cardEl.offsetWidth; // Trigger reflow
+                cardEl.classList.add("is-summoning");
+
             } catch (e) {
                 console.error(e);
                 document.getElementById('cardName').textContent = "Error: " + e.message;
