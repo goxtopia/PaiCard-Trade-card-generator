@@ -32,6 +32,7 @@
         <activity android:name=".GodsDrawActivity" />
         <activity android:name=".BatchDrawActivity" />
         <activity android:name=".LibraryActivity" />
+        <activity android:name=".CardDetailActivity" />
         <activity android:name=".SettingsActivity" />
 
     </application>
