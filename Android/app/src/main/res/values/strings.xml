@@ -8,6 +8,7 @@
     <string name="prompt_api_url">API URL (Optional)</string>
     <string name="prompt_model">Model Name</string>
     <string name="prompt_instruction">Card Style / Instructions</string>
+    <string name="prompt_god_draw_url">God\'s Draw Image API URL (Optional)</string>
     <string name="save">Save</string>
     <string name="analyzing">Analyzing Image...</string>
 </resources>
