@@ -39,7 +39,7 @@
                 android:layout_weight="1"
                 android:text="@string/generate"
                 android:enabled="false"
-                style="@style/Widget.Material3.Button.FilledButton"/>
+                style="@style/Widget.Material3.Button"/>
         </LinearLayout>
     </LinearLayout>
 
