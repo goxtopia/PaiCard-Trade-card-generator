@@ -229,10 +229,10 @@ class SingleDrawActivity : AppCompatActivity() {
                     cardData = vlmService.analyzeImage(selectedImageBitmap!!, apiKey!!, apiUrl!!, model!!, customPrompt!!)
                     // Cache it
                     CardRepository.saveCard(this, md5, cardData)
-                }
 
-                // 2. Save Card (on BG thread)
-                saveCardToLibrary(cardData, selectedImageBitmap!!)
+                    // 2. Save Card (on BG thread)
+                    saveCardToLibrary(cardData, selectedImageBitmap!!)
+                }
 
                 mainHandler.post {
                     setLoading(false)

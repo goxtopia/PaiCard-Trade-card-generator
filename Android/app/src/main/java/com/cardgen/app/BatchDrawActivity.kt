@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -13,6 +14,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -28,6 +30,8 @@ class BatchDrawActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var fabCreatePack: FloatingActionButton
     private lateinit var adapter: PackListAdapter
+
+    private val TAG = "BatchDrawActivity"
 
     private var packs: List<PackRepository.Pack> = ArrayList()
     private val executor = Executors.newSingleThreadExecutor()
@@ -120,17 +124,26 @@ class BatchDrawActivity : AppCompatActivity() {
                      if (bytes != null) {
                          val md5 = CardRepository.calculateMD5(bytes)
 
-                         // Save local copy
-                         val filename = "pack_img_${md5}.jpg"
-                         val file = java.io.File(filesDir, filename)
-                         if (!file.exists()) {
-                             java.io.FileOutputStream(file).use { out ->
-                                 out.write(bytes)
+                         var cardData = CardRepository.getCard(md5)
+                         var fromCache = false
+
+                         if (cardData != null) {
+                             fromCache = true
+                             Log.d(TAG, "createNewPack: Card Data from Cache! Skip duplicate card")
+                         } else {
+                             // Save local copy
+                             val filename = "pack_img_${md5}.jpg"
+                             val file = java.io.File(filesDir, filename)
+                             if (!file.exists()) {
+                                 java.io.FileOutputStream(file).use { out ->
+                                     out.write(bytes)
+                                 }
                              }
+
+                             // Use local path instead of URI
+                             items.add(PackRepository.PackItem(file.absolutePath, md5))
                          }
 
-                         // Use local path instead of URI
-                         items.add(PackRepository.PackItem(file.absolutePath, md5))
                      }
                  } catch (e: Exception) {
                      e.printStackTrace()
@@ -148,6 +161,10 @@ class BatchDrawActivity : AppCompatActivity() {
 
                 runOnUiThread {
                     refreshPacks()
+                }
+            } else {
+                runOnUiThread {
+                    Toast.makeText(this, "No valid images selected", Toast.LENGTH_SHORT).show()
                 }
             }
         }
