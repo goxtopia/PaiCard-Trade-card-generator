@@ -3,8 +3,10 @@ package com.cardgen.app
 import android.animation.ObjectAnimator
 import android.animation.PropertyValuesHolder
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.drawable.GradientDrawable
@@ -34,8 +36,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
 import java.util.concurrent.Executors
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.TimeUnit
 
 class BatchDrawActivity : AppCompatActivity() {
 
@@ -60,23 +60,55 @@ class BatchDrawActivity : AppCompatActivity() {
 
     private lateinit var adapter: BatchGridAdapter
     private val processedCards = ArrayList<BatchCardItem>()
+    private val processedMD5s = HashSet<String>()
 
-    private val vlmService = VLMService()
-    private val executor: ExecutorService = Executors.newFixedThreadPool(4) // Parallel processing
+    private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
 
     data class BatchCardItem(
         val bitmap: Bitmap,
+        val uri: String,
+        val md5: String,
         var cardData: VLMService.CardData? = null,
         var isFlipped: Boolean = false,
         var isAnalyzing: Boolean = false,
         var error: String? = null
     )
 
+    private val cardUpdateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == CardGenerationService.ACTION_CARD_COMPLETE) {
+                val reqId = intent.getStringExtra(CardGenerationService.RESULT_REQUEST_ID)
+                val md5 = intent.getStringExtra(CardGenerationService.RESULT_MD5)
+                val dataJson = intent.getStringExtra(CardGenerationService.RESULT_DATA_JSON)
+                val error = intent.getStringExtra(CardGenerationService.RESULT_ERROR)
+
+                // Find item by MD5 or reqId (using MD5 as ID for now)
+                val index = processedCards.indexOfFirst { it.md5 == md5 }
+                if (index != -1) {
+                    val item = processedCards[index]
+                    item.isAnalyzing = false
+
+                    if (dataJson != null) {
+                        item.cardData = Gson().fromJson(dataJson, VLMService.CardData::class.java)
+                        // Auto-save to local library history (Service handles cache, UI handles "History" list)
+                        saveCardToLibraryHistory(item.cardData!!, item.bitmap)
+                    } else {
+                        item.error = error ?: "Unknown Error"
+                    }
+
+                    adapter.notifyItemChanged(index)
+                    updateProcessingStatus()
+                }
+            }
+        }
+    }
+
     private val pickImagesLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val data: Intent? = result.data
             processedCards.clear() // Clear previous selection
+            processedMD5s.clear()
 
             if (data?.clipData != null) {
                 val count = data.clipData!!.itemCount
@@ -99,8 +131,20 @@ class BatchDrawActivity : AppCompatActivity() {
         supportActionBar?.title = "Card Packs"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
+        CardRepository.init(this) // Ensure repo is loaded
+
         initViews()
         setupListeners()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        registerReceiver(cardUpdateReceiver, IntentFilter(CardGenerationService.ACTION_CARD_COMPLETE), Context.RECEIVER_NOT_EXPORTED)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(cardUpdateReceiver)
     }
 
     override fun onDestroy() {
@@ -140,7 +184,7 @@ class BatchDrawActivity : AppCompatActivity() {
         }
 
         btnCreatePacks.setOnClickListener {
-            startProcessing()
+            startQueueing()
         }
 
         packItem.setOnClickListener {
@@ -183,72 +227,74 @@ class BatchDrawActivity : AppCompatActivity() {
                 } else {
                     bitmap
                 }
-                processedCards.add(BatchCardItem(scaled))
+                // Pre-calculate MD5 on main thread? No, do it later. But we need unique ID.
+                // For now, use a placeholder md5, will update in startQueueing
+                processedCards.add(BatchCardItem(scaled, uri.toString(), "pending_${System.nanoTime()}"))
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    private fun startProcessing() {
+    private fun startQueueing() {
         btnPickImages.isEnabled = false
         btnCreatePacks.isEnabled = false
         processingText.visibility = View.VISIBLE
-        processingText.text = "Processing ${processedCards.size} images... (0/${processedCards.size})"
+        processingText.text = "Hashing & Queueing..."
 
-        val prefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-        val apiKey = prefs.getString("api_key", "")
-        val apiUrl = prefs.getString("api_url", "https://api.openai.com")
-        val model = prefs.getString("model", "gpt-4o-mini")
-        val customPrompt = prefs.getString("custom_prompt", "Create a funny and creative name and ability description.")
+        // 1. Calculate MD5s in background
+        executor.execute {
+             val updatedItems = ArrayList<BatchCardItem>()
 
-        if (apiKey.isNullOrEmpty()) {
-             processingText.text = "Error: API Key not set"
-             btnPickImages.isEnabled = true
-             return
+             for (item in processedCards) {
+                 val md5 = CardRepository.calculateMD5(item.bitmap)
+                 val newItem = item.copy(md5 = md5)
+                 updatedItems.add(newItem)
+
+                 // Check if already done?
+                 val cached = CardRepository.getCard(md5)
+                 if (cached != null) {
+                     newItem.cardData = cached
+                     // Auto save to history
+                     saveCardToLibraryHistory(cached, item.bitmap)
+                 } else {
+                     newItem.isAnalyzing = true
+                 }
+             }
+
+             // 2. Queue to Service
+             for (item in updatedItems) {
+                 if (item.cardData == null) {
+                     val intent = Intent(this, CardGenerationService::class.java)
+                     intent.action = CardGenerationService.ACTION_PROCESS_IMAGE
+                     intent.putExtra(CardGenerationService.EXTRA_IMAGE_URI, item.uri)
+                     intent.putExtra(CardGenerationService.EXTRA_MD5, item.md5)
+                     intent.putExtra(CardGenerationService.EXTRA_REQUEST_ID, item.md5)
+                     startService(intent)
+                 }
+             }
+
+             mainHandler.post {
+                 processedCards.clear()
+                 processedCards.addAll(updatedItems)
+                 adapter.notifyDataSetChanged() // Reload with correct MD5s
+
+                 // Move to Pack View immediately
+                 uploadContainer.visibility = View.GONE
+                 packContainer.visibility = View.VISIBLE
+                 packCountText.text = "Contains ${processedCards.size} Cards"
+                 processingText.visibility = View.GONE
+                 btnPickImages.isEnabled = true
+
+                 updateProcessingStatus()
+             }
         }
+    }
 
-        // Process all images in background
-        Thread {
-            val latch = java.util.concurrent.CountDownLatch(processedCards.size)
-            var completedCount = 0
-
-            for (item in processedCards) {
-                executor.execute {
-                    try {
-                        item.isAnalyzing = true
-                        val data = vlmService.analyzeImage(item.bitmap, apiKey!!, apiUrl!!, model!!, customPrompt!!)
-                        saveCardToLibrary(data, item.bitmap)
-                        item.cardData = data
-                    } catch (e: Exception) {
-                        item.error = e.message
-                    } finally {
-                        item.isAnalyzing = false
-                        synchronized(this) {
-                            completedCount++
-                            mainHandler.post {
-                                processingText.text = "Processing... ($completedCount/${processedCards.size})"
-                            }
-                        }
-                        latch.countDown()
-                    }
-                }
-            }
-
-            try {
-                latch.await(60, TimeUnit.SECONDS) // Timeout safety
-            } catch (e: InterruptedException) {
-                e.printStackTrace()
-            }
-
-            mainHandler.post {
-                uploadContainer.visibility = View.GONE
-                packContainer.visibility = View.VISIBLE
-                packCountText.text = "Contains ${processedCards.size} Cards"
-                processingText.visibility = View.GONE
-                btnPickImages.isEnabled = true
-            }
-        }.start()
+    private fun updateProcessingStatus() {
+        val completed = processedCards.count { it.cardData != null || it.error != null }
+        val total = processedCards.size
+        packCountText.text = "Contains $total Cards ($completed Ready)"
     }
 
     private fun openPack() {
@@ -260,9 +306,6 @@ class BatchDrawActivity : AppCompatActivity() {
             gridContainer.visibility = View.VISIBLE
             gridContainer.alpha = 0f
             gridContainer.animate().alpha(1f).setDuration(500).start()
-
-            // Trigger layout
-            adapter.notifyDataSetChanged()
         }.start()
     }
 
@@ -292,12 +335,15 @@ class BatchDrawActivity : AppCompatActivity() {
 
             animator.start()
             item.isFlipped = true
-            adapter.notifyItemChanged(position) // Ensure data is bound
+            adapter.notifyItemChanged(position)
         }
     }
 
-    private fun saveCardToLibrary(data: VLMService.CardData, bitmap: Bitmap) {
+    private fun saveCardToLibraryHistory(data: VLMService.CardData, bitmap: Bitmap) {
         try {
+            // Check if file exists already for this exact image?
+            // We use MD5 for cache, but library history is a list.
+            // Just overwrite/save local copy for the library list view.
             val filename = "card_${System.currentTimeMillis()}.png"
             val file = File(filesDir, filename)
             val out = FileOutputStream(file)
@@ -336,7 +382,6 @@ class BatchDrawActivity : AppCompatActivity() {
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val cardFlipContainer: FrameLayout = view.findViewById(R.id.cardFlipContainer)
             val cardBack: ImageView = view.findViewById(R.id.cardBack)
-            // Fix: Change from ConstraintLayout to CardView to match XML
             val cardFront: CardView = view.findViewById(R.id.cardFront)
 
             val ivArt: ImageView = view.findViewById(R.id.ivCardArt)
@@ -365,23 +410,24 @@ class BatchDrawActivity : AppCompatActivity() {
                 holder.cardFront.scaleX = -1f
 
                 holder.ivArt.setImageBitmap(item.bitmap)
-                holder.loadingOverlay.visibility = View.GONE
 
-                if (item.cardData != null) {
-                    holder.tvName.text = item.cardData!!.name
-                    holder.tvRarity.text = item.cardData!!.rarity
-                    holder.tvDesc.text = item.cardData!!.description
-                    holder.tvAtk.text = item.cardData!!.atk
-                    holder.tvDef.text = item.cardData!!.def
-
-                    applyRarityVisuals(holder, item.cardData!!.rarity)
-                } else if (item.error != null) {
-                     holder.tvName.text = "Error"
-                     holder.tvDesc.text = item.error
+                if (item.isAnalyzing) {
+                     holder.loadingOverlay.visibility = View.VISIBLE
+                     holder.tvName.text = "Analyzing..."
                 } else {
-                    holder.tvName.text = "Loading..."
+                     holder.loadingOverlay.visibility = View.GONE
+                     if (item.cardData != null) {
+                        holder.tvName.text = item.cardData!!.name
+                        holder.tvRarity.text = item.cardData!!.rarity
+                        holder.tvDesc.text = item.cardData!!.description
+                        holder.tvAtk.text = item.cardData!!.atk
+                        holder.tvDef.text = item.cardData!!.def
+                        applyRarityVisuals(holder, item.cardData!!.rarity)
+                     } else if (item.error != null) {
+                         holder.tvName.text = "Error"
+                         holder.tvDesc.text = item.error
+                     }
                 }
-
             } else {
                 holder.cardFlipContainer.rotationY = 0f
                 holder.cardBack.visibility = View.VISIBLE
@@ -404,8 +450,6 @@ class BatchDrawActivity : AppCompatActivity() {
                 else -> Pair(R.color.rarity_n_bg, R.color.rarity_n_border)
             }
 
-            // To set the background color of the card content, we need to access the child of the CardView
-            // which is the ConstraintLayout.
             if (holder.cardFront.childCount > 0) {
                  val innerLayout = holder.cardFront.getChildAt(0)
                  val bgDrawable = ContextCompat.getDrawable(holder.itemView.context, R.drawable.bg_card_base) as GradientDrawable
@@ -414,7 +458,6 @@ class BatchDrawActivity : AppCompatActivity() {
                  innerLayout.background = bgDrawable
             }
 
-            // Animations for High Rarity
             if (r.contains("SSR") || r.contains("UR")) {
                 startBreathingAnimation(holder.itemView)
             }
