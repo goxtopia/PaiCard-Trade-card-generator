@@ -7,9 +7,26 @@ document.addEventListener('DOMContentLoaded', () => {
         def: document.getElementById('promptDef')
     };
 
+    const singleCallMode = document.getElementById('singleCallMode');
+    const promptSingle = document.getElementById('promptSingle');
+    const singleCallSection = document.getElementById('singleCallSection');
+    const multiCallSection = document.getElementById('multiCallSection');
+
     const saveBtn = document.getElementById('saveBtn');
     const resetBtn = document.getElementById('resetBtn');
     const statusText = document.getElementById('statusText');
+
+    function toggleSections() {
+        if (singleCallMode.checked) {
+            singleCallSection.style.display = 'block';
+            multiCallSection.style.display = 'none';
+        } else {
+            singleCallSection.style.display = 'none';
+            multiCallSection.style.display = 'block';
+        }
+    }
+
+    singleCallMode.addEventListener('change', toggleSections);
 
     // Load Settings
     fetch('/api/settings')
@@ -22,6 +39,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             }
+
+            if (data.single_call_mode) {
+                singleCallMode.checked = true;
+            } else {
+                singleCallMode.checked = false;
+            }
+
+            if (data.single_call_prompt) {
+                promptSingle.value = data.single_call_prompt;
+            }
+
+            toggleSections();
         });
 
     // Save Settings
@@ -30,6 +59,12 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const key in fields) {
             prompts[key] = fields[key].value;
         }
+
+        const settings = {
+            prompts: prompts,
+            single_call_mode: singleCallMode.checked,
+            single_call_prompt: promptSingle.value
+        };
 
         saveBtn.disabled = true;
         statusText.textContent = "Saving...";
@@ -40,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ prompts })
+                body: JSON.stringify(settings)
             });
 
             if (response.ok) {
@@ -63,6 +98,9 @@ document.addEventListener('DOMContentLoaded', () => {
             for (const key in fields) {
                 fields[key].value = "";
             }
+            singleCallMode.checked = false;
+            promptSingle.value = "";
+            toggleSections();
             saveBtn.click();
         }
     });
