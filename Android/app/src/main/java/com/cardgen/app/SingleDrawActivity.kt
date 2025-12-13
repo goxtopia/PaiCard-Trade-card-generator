@@ -214,16 +214,30 @@ class SingleDrawActivity : AppCompatActivity() {
 
         executor.execute {
             try {
-                // 1. Analyze Image
-                val cardData = vlmService.analyzeImage(selectedImageBitmap!!, apiKey!!, apiUrl!!, model!!, customPrompt!!)
+                // Initialize Repo if needed
+                CardRepository.init(this)
+
+                // 0. Check Cache
+                val md5 = CardRepository.calculateMD5(selectedImageBitmap!!)
+                var cardData = CardRepository.getCard(md5)
+                var fromCache = false
+
+                if (cardData != null) {
+                    fromCache = true
+                } else {
+                    // 1. Analyze Image
+                    cardData = vlmService.analyzeImage(selectedImageBitmap!!, apiKey!!, apiUrl!!, model!!, customPrompt!!)
+                    // Cache it
+                    CardRepository.saveCard(this, md5, cardData)
+                }
 
                 // 2. Save Card (on BG thread)
                 saveCardToLibrary(cardData, selectedImageBitmap!!)
 
                 mainHandler.post {
                     setLoading(false)
-                    renderCardNative(cardData)
-                    statusText.text = "Card Generated & Saved!"
+                    renderCardNative(cardData!!)
+                    statusText.text = if (fromCache) "Card Loaded from Cache!" else "Card Generated & Saved!"
                 }
 
             } catch (e: Exception) {
