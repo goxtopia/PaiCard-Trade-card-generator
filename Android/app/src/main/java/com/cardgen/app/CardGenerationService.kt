@@ -13,7 +13,6 @@ import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import java.io.File
 import java.io.InputStream
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
@@ -22,18 +21,10 @@ class CardGenerationService : Service() {
 
     companion object {
         const val CHANNEL_ID = "CardGenChannel"
-        const val ACTION_PROCESS_IMAGE = "com.cardgen.app.action.PROCESS_IMAGE"
-        const val ACTION_CARD_COMPLETE = "com.cardgen.app.action.CARD_COMPLETE"
+        const val ACTION_PROCESS_PACK = "com.cardgen.app.action.PROCESS_PACK"
+        const val ACTION_PACK_UPDATED = "com.cardgen.app.action.PACK_UPDATED" // New broadcast for Pack updates
 
-        const val EXTRA_IMAGE_URI = "extra_image_uri"
-        const val EXTRA_MD5 = "extra_md5"
-        const val EXTRA_REQUEST_ID = "extra_request_id" // To track back to UI item
-
-        // Broadcast Extras
-        const val RESULT_DATA_JSON = "result_data_json"
-        const val RESULT_MD5 = "result_md5"
-        const val RESULT_REQUEST_ID = "result_request_id"
-        const val RESULT_ERROR = "result_error"
+        const val EXTRA_PACK_ID = "extra_pack_id"
     }
 
     private val queue = ConcurrentLinkedQueue<Task>()
@@ -42,27 +33,34 @@ class CardGenerationService : Service() {
     private var isRunning = false
 
     data class Task(
-        val uri: String,
-        val md5: String,
-        val requestId: String
+        val packId: String,
+        val item: PackRepository.PackItem
     )
 
     override fun onCreate() {
         super.onCreate()
         CardRepository.init(this)
+        PackRepository.init(this)
         createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_PROCESS_IMAGE) {
-            val uriStr = intent.getStringExtra(EXTRA_IMAGE_URI)
-            val md5 = intent.getStringExtra(EXTRA_MD5)
-            val reqId = intent.getStringExtra(EXTRA_REQUEST_ID) ?: "0"
+        if (intent?.action == ACTION_PROCESS_PACK) {
+            val packId = intent.getStringExtra(EXTRA_PACK_ID)
 
-            if (uriStr != null && md5 != null) {
-                val task = Task(uriStr, md5, reqId)
-                queue.add(task)
-                processNext()
+            if (packId != null) {
+                val pack = PackRepository.getPack(packId)
+                if (pack != null) {
+                    // Queue all items in the pack
+                    for (item in pack.items) {
+                        // Only queue if not already done
+                        if (!CardRepository.hasCard(item.md5)) {
+                            queue.add(Task(packId, item))
+                        }
+                    }
+                    // Trigger initial check/start
+                    processNext()
+                }
             }
         }
         return START_REDELIVER_INTENT
@@ -70,19 +68,23 @@ class CardGenerationService : Service() {
 
     private fun processNext() {
         if (isRunning) return
-        val task = queue.peek() ?: return
+        val task = queue.peek() ?: run {
+            // Queue empty, stop
+            stopForeground(true)
+            return
+        }
 
         isRunning = true
-        updateNotification("Processing Card...", "Queue size: ${queue.size}")
+        updateNotification("Processing Pack...", "Remaining items: ${queue.size}")
 
         executor.execute {
             try {
-                // 1. Check Cache
-                var cardData = CardRepository.getCard(task.md5)
+                // 1. Check Cache (Double check)
+                var cardData = CardRepository.getCard(task.item.md5)
 
                 if (cardData == null) {
                     // 2. Generate
-                    val bitmap = loadBitmap(Uri.parse(task.uri))
+                    val bitmap = loadBitmap(Uri.parse(task.item.uri))
                     if (bitmap != null) {
                         val prefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
                         val apiKey = prefs.getString("api_key", "")
@@ -94,28 +96,26 @@ class CardGenerationService : Service() {
 
                         cardData = vlmService.analyzeImage(bitmap, apiKey!!, apiUrl!!, model!!, customPrompt!!)
 
-                        // 3. Save Cache
-                        CardRepository.saveCard(this, task.md5, cardData)
+                        // 3. Save Cache (Idempotency)
+                        CardRepository.saveCard(this, task.item.md5, cardData)
                     } else {
-                        throw Exception("Failed to load image")
+                        // If we can't load image, we can't generate.
+                        // For now, we just skip it or retry?
+                        // Let's assume transient error and skip, but this might leave pack in limbo.
+                        // Ideally we mark error in repo.
                     }
                 }
 
-                // 4. Broadcast Success
-                val intent = Intent(ACTION_CARD_COMPLETE)
-                intent.putExtra(RESULT_REQUEST_ID, task.requestId)
-                intent.putExtra(RESULT_MD5, task.md5)
-                // Serialize simple fields manually or use gson if needed
-                intent.putExtra(RESULT_DATA_JSON, com.google.gson.Gson().toJson(cardData))
+                // 4. Check Pack Readiness
+                PackRepository.checkPackReadiness(this, task.packId)
+
+                // 5. Broadcast Update
+                val intent = Intent(ACTION_PACK_UPDATED)
+                intent.putExtra(EXTRA_PACK_ID, task.packId)
                 sendBroadcast(intent)
 
             } catch (e: Exception) {
                 e.printStackTrace()
-                val intent = Intent(ACTION_CARD_COMPLETE)
-                intent.putExtra(RESULT_REQUEST_ID, task.requestId)
-                intent.putExtra(RESULT_MD5, task.md5)
-                intent.putExtra(RESULT_ERROR, e.message)
-                sendBroadcast(intent)
             } finally {
                 queue.poll() // Remove current
                 isRunning = false

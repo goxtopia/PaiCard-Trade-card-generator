@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:background="#2c3e50"
+    android:layout_marginBottom="8dp">
+
+    <ImageView
+        android:id="@+id/ivPackIcon"
+        android:layout_width="60dp"
+        android:layout_height="90dp"
+        android:src="@drawable/bg_card_pack"
+        android:scaleType="fitCenter"/>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:layout_marginStart="16dp"
+        android:layout_gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvPackId"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pack #1"
+            android:textColor="#FFFFFF"
+            android:textStyle="bold"
+            android:textSize="16sp"/>
+
+        <TextView
+            android:id="@+id/tvPackStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Processing..."
+            android:textColor="#AAAAAA"
+            android:textSize="14sp"
+            android:layout_marginTop="4dp"/>
+
+        <ProgressBar
+            android:id="@+id/progressBarPack"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:progressTint="#f1c40f"
+            android:indeterminate="true"/>
+
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnOpenPack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="OPEN"
+        android:layout_gravity="center_vertical"
+        android:backgroundTint="#f1c40f"
+        android:textColor="#000000"
+        android:visibility="gone"/>
+
+</LinearLayout>
