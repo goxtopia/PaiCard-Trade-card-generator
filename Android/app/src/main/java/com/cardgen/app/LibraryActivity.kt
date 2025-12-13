@@ -1,8 +1,11 @@
 package com.cardgen.app
 
+import androidx.appcompat.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.PorterDuff
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Menu
@@ -10,8 +13,11 @@ import android.view.MenuItem
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
+import android.widget.PopupMenu
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
@@ -27,6 +33,7 @@ class LibraryActivity : AppCompatActivity() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var adapter: LibraryAdapter
+    private lateinit var btnSort: Button
     private lateinit var imageExecutor: ExecutorService
 
     private var allCards: MutableList<SingleDrawActivity.SavedCard> = ArrayList()
@@ -44,18 +51,57 @@ class LibraryActivity : AppCompatActivity() {
 
         imageExecutor = Executors.newFixedThreadPool(4)
 
+        btnSort = findViewById(R.id.btnSort)
         recyclerView = findViewById(R.id.recyclerView)
-        recyclerView.layoutManager = GridLayoutManager(this, 3)
+        // Changed to 2 columns as requested
+        recyclerView.layoutManager = GridLayoutManager(this, 2)
 
         allCards = loadCards().toMutableList()
         sortCards() // Initial sort
 
-        adapter = LibraryAdapter(allCards) { card ->
-            openCardDetail(card)
-        }
+        adapter = LibraryAdapter(allCards,
+            onClick = { card -> openCardDetail(card) },
+            onLongClick = { card -> showDeleteDialog(card) }
+        )
         recyclerView.adapter = adapter
+
+        btnSort.setOnClickListener { view ->
+            showSortMenu(view)
+        }
+        updateSortButtonText()
     }
 
+    private fun showSortMenu(view: View) {
+        val popup = PopupMenu(this, view)
+        popup.menu.add(0, 1, 0, "Date: Newest")
+        popup.menu.add(0, 2, 0, "Date: Oldest")
+        popup.menu.add(0, 3, 0, "Rarity: High to Low")
+        popup.menu.add(0, 4, 0, "Rarity: Low to High")
+
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                1 -> { currentSortMode = SortMode.DATE_NEWEST; sortCards() }
+                2 -> { currentSortMode = SortMode.DATE_OLDEST; sortCards() }
+                3 -> { currentSortMode = SortMode.RARITY_HIGH; sortCards() }
+                4 -> { currentSortMode = SortMode.RARITY_LOW; sortCards() }
+            }
+            updateSortButtonText()
+            true
+        }
+        popup.show()
+    }
+
+    private fun updateSortButtonText() {
+        val text = when (currentSortMode) {
+            SortMode.DATE_NEWEST -> "Newest"
+            SortMode.DATE_OLDEST -> "Oldest"
+            SortMode.RARITY_HIGH -> "High Rarity"
+            SortMode.RARITY_LOW -> "Low Rarity"
+        }
+        btnSort.text = "Sort: $text"
+    }
+
+    // Keep Options Menu for consistency, though UI button is primary now
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menu?.add(0, 1, 0, "Date: Newest")
         menu?.add(0, 2, 0, "Date: Oldest")
@@ -70,10 +116,10 @@ class LibraryActivity : AppCompatActivity() {
                 finish()
                 return true
             }
-            1 -> { currentSortMode = SortMode.DATE_NEWEST; sortCards() }
-            2 -> { currentSortMode = SortMode.DATE_OLDEST; sortCards() }
-            3 -> { currentSortMode = SortMode.RARITY_HIGH; sortCards() }
-            4 -> { currentSortMode = SortMode.RARITY_LOW; sortCards() }
+            1 -> { currentSortMode = SortMode.DATE_NEWEST; sortCards(); updateSortButtonText() }
+            2 -> { currentSortMode = SortMode.DATE_OLDEST; sortCards(); updateSortButtonText() }
+            3 -> { currentSortMode = SortMode.RARITY_HIGH; sortCards(); updateSortButtonText() }
+            4 -> { currentSortMode = SortMode.RARITY_LOW; sortCards(); updateSortButtonText() }
         }
         return super.onOptionsItemSelected(item)
     }
@@ -101,6 +147,40 @@ class LibraryActivity : AppCompatActivity() {
         }
     }
 
+    private fun showDeleteDialog(card: SingleDrawActivity.SavedCard) {
+        AlertDialog.Builder(this)
+            .setTitle("Delete Card")
+            .setMessage("Are you sure you want to delete '${card.name}'? This cannot be undone.")
+            .setPositiveButton("Delete") { _, _ ->
+                deleteCard(card)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun deleteCard(card: SingleDrawActivity.SavedCard) {
+        // 1. Remove file
+        val file = File(card.imagePath)
+        if (file.exists()) {
+            file.delete()
+        }
+
+        // 2. Remove from list
+        allCards.remove(card)
+        adapter.notifyDataSetChanged()
+
+        // 3. Save updated list
+        saveCards(allCards)
+
+        Toast.makeText(this, "Card deleted", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun saveCards(cards: List<SingleDrawActivity.SavedCard>) {
+        val prefs = getSharedPreferences("card_library", Context.MODE_PRIVATE)
+        val json = Gson().toJson(cards)
+        prefs.edit().putString("history", json).apply()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         imageExecutor.shutdownNow()
@@ -126,18 +206,20 @@ class LibraryActivity : AppCompatActivity() {
 
     inner class LibraryAdapter(
         private val items: List<SingleDrawActivity.SavedCard>,
-        private val onClick: (SingleDrawActivity.SavedCard) -> Unit
+        private val onClick: (SingleDrawActivity.SavedCard) -> Unit,
+        private val onLongClick: (SingleDrawActivity.SavedCard) -> Unit
     ) : RecyclerView.Adapter<LibraryAdapter.ViewHolder>() {
 
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
             val img: ImageView = view.findViewById(R.id.itemImg)
             val name: TextView = view.findViewById(R.id.itemName)
             val rarity: TextView = view.findViewById(R.id.itemRarity)
-            val innerLayout: View = view.findViewById(R.id.cardInnerLayout)
+            val border: View = view.findViewById(R.id.rarityBorder)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_library_card, parent, false)
+            // Using the new V2 layout
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.item_library_card_v2, parent, false)
             return ViewHolder(view)
         }
 
@@ -154,7 +236,7 @@ class LibraryActivity : AppCompatActivity() {
                     val options = BitmapFactory.Options()
                     options.inJustDecodeBounds = true
                     BitmapFactory.decodeFile(imgFile.absolutePath, options)
-                    options.inSampleSize = calculateInSampleSize(options, 100, 145)
+                    options.inSampleSize = calculateInSampleSize(options, 200, 260) // Adjusted for larger view
                     options.inJustDecodeBounds = false
                     val bitmap = BitmapFactory.decodeFile(imgFile.absolutePath, options)
 
@@ -171,28 +253,48 @@ class LibraryActivity : AppCompatActivity() {
             holder.name.text = item.name
             holder.rarity.text = item.rarity
 
-            // Apply Rarity Colors (Mini Version)
-            val (bgColor, borderColor) = getRarityColors(item.rarity)
-            val bgDrawable = ContextCompat.getDrawable(holder.itemView.context, R.drawable.bg_card_base) as GradientDrawable
-            bgDrawable.setColor(ContextCompat.getColor(holder.itemView.context, bgColor))
-            bgDrawable.setStroke(2, ContextCompat.getColor(holder.itemView.context, borderColor)) // Thinner border for mini
-            holder.innerLayout.background = bgDrawable
+            // Apply Rarity Colors to Border and Badge
+            val colorRes = getRarityColorRes(item.rarity)
+            val colorInt = ContextCompat.getColor(holder.itemView.context, colorRes)
+
+            // Set border color
+            val borderDrawable = holder.border.background as? GradientDrawable
+            // Note: GradientDrawable might be wrapped or state list.
+            // In the XML it's a shape.
+            // We need to re-fetch or cast properly.
+            // If it fails, we reconstruct or set Tint.
+            // Safest for Shape drawable stroke modification:
+
+            // Approach 2: Use PorterDuff for simple tint on the stroke drawable if it's white
+            holder.border.background.mutate().setColorFilter(colorInt, PorterDuff.Mode.SRC_IN)
+
+            // Set Badge background color (semi-transparent version of rarity color)
+            val badgeDrawable = holder.rarity.background.mutate() as GradientDrawable
+            badgeDrawable.setColor(colorInt) // Solid color for badge? Or semi-transparent?
+            // Let's make the badge solid color but slightly dark text or white text. Text is white in XML.
+            // Badge background in XML is #80000000 (semi trans black). Let's override it with rarity color.
+            badgeDrawable.setColor(colorInt)
 
             holder.itemView.setOnClickListener {
                 onClick(item)
+            }
+
+            holder.itemView.setOnLongClickListener {
+                onLongClick(item)
+                true
             }
         }
 
         override fun getItemCount() = items.size
 
-        private fun getRarityColors(rarity: String): Pair<Int, Int> {
+        private fun getRarityColorRes(rarity: String): Int {
             val r = rarity.uppercase()
             return when {
-                r.contains("UR") -> Pair(R.color.rarity_ur_bg, R.color.rarity_ur_border)
-                r.contains("SSR") -> Pair(R.color.rarity_ssr_bg, R.color.rarity_ssr_border)
-                r.contains("SR") -> Pair(R.color.rarity_sr_bg, R.color.rarity_sr_border)
-                r.contains("R") -> Pair(R.color.rarity_r_bg, R.color.rarity_r_border)
-                else -> Pair(R.color.rarity_n_bg, R.color.rarity_n_border)
+                r.contains("UR") -> R.color.rarity_ur_border // We can use the border colors defined in colors.xml or fallback
+                r.contains("SSR") -> R.color.rarity_ssr_border
+                r.contains("SR") -> R.color.rarity_sr_border
+                r.contains("R") -> R.color.rarity_r_border
+                else -> R.color.rarity_n_border
             }
         }
 
