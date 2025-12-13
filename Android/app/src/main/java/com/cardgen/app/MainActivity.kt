@@ -24,6 +24,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,16 +38,29 @@ import java.util.concurrent.Executors
 import android.util.Base64
 import java.io.ByteArrayOutputStream
 import java.util.Random
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import android.animation.ObjectAnimator
+import android.view.animation.AccelerateDecelerateInterpolator
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var btnPickImage: Button
     private lateinit var btnGenerate: Button
+    private lateinit var btnGodsDraw: Button
+    private lateinit var btnLibrary: Button
     private lateinit var progressBar: ProgressBar
     private lateinit var statusText: TextView
 
     // Native Card Views
+    private lateinit var cardFlipContainer: FrameLayout
     private lateinit var cardContainer: ConstraintLayout
+    private lateinit var cardBack: ImageView
     private lateinit var tvCardName: TextView
     private lateinit var tvCardAttribute: TextView
     private lateinit var ivCardArt: ImageView
@@ -56,10 +70,29 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvCardDef: TextView
     private lateinit var viewEffectOverlay: View
 
+    // Library Views
+    private lateinit var libraryContainer: FrameLayout
+    private lateinit var libraryList: LinearLayout
+    private lateinit var btnCloseLibrary: Button
+
     private var selectedImageBitmap: Bitmap? = null
     private val vlmService = VLMService()
     private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val client = OkHttpClient()
+    private val gson = Gson()
+
+    private var isFlipped = false
+
+    data class SavedCard(
+        val name: String,
+        val rarity: String,
+        val description: String,
+        val atk: String,
+        val def: String,
+        val imagePath: String,
+        val timestamp: Long
+    )
 
     private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -84,15 +117,37 @@ class MainActivity : AppCompatActivity() {
         btnGenerate.setOnClickListener {
             generateCard()
         }
+
+        btnGodsDraw.setOnClickListener {
+            performGodsDraw()
+        }
+
+        btnLibrary.setOnClickListener {
+            showLibrary()
+        }
+
+        btnCloseLibrary.setOnClickListener {
+            libraryContainer.visibility = View.GONE
+        }
+
+        cardFlipContainer.setOnClickListener {
+            if (selectedImageBitmap != null || tvCardName.text != "Card Name") {
+                flipCard()
+            }
+        }
     }
 
     private fun bindViews() {
         btnPickImage = findViewById(R.id.btnPickImage)
         btnGenerate = findViewById(R.id.btnGenerate)
+        btnGodsDraw = findViewById(R.id.btnGodsDraw)
+        btnLibrary = findViewById(R.id.btnLibrary)
         progressBar = findViewById(R.id.progressBar)
         statusText = findViewById(R.id.statusText)
 
+        cardFlipContainer = findViewById(R.id.cardFlipContainer)
         cardContainer = findViewById(R.id.cardContainer)
+        cardBack = findViewById(R.id.cardBack)
         tvCardName = findViewById(R.id.tvCardName)
         tvCardAttribute = findViewById(R.id.tvCardAttribute)
         ivCardArt = findViewById(R.id.ivCardArt)
@@ -102,8 +157,13 @@ class MainActivity : AppCompatActivity() {
         tvCardDef = findViewById(R.id.tvCardDef)
         viewEffectOverlay = findViewById(R.id.viewEffectOverlay)
 
-        // Hide card initially or set empty state
-        cardContainer.visibility = View.INVISIBLE
+        libraryContainer = findViewById(R.id.libraryContainer)
+        libraryList = findViewById(R.id.libraryList)
+        btnCloseLibrary = findViewById(R.id.btnCloseLibrary)
+
+        // Ensure proper initial state
+        cardContainer.visibility = View.VISIBLE // Keep layout bounds
+        cardBack.visibility = View.GONE
     }
 
     private fun checkPermissionsAndPickImage() {
@@ -132,11 +192,75 @@ class MainActivity : AppCompatActivity() {
             btnGenerate.isEnabled = true
             statusText.text = "Image Selected"
 
+            // Reset flip state if needed
+            if (isFlipped) {
+                cardBack.visibility = View.GONE
+                cardContainer.visibility = View.VISIBLE
+                isFlipped = false
+                cardFlipContainer.rotationY = 0f
+            }
+
             // Show preview in ImageView
             ivCardArt.setImageBitmap(selectedImageBitmap)
-            cardContainer.visibility = View.VISIBLE
         } catch (e: Exception) {
             Toast.makeText(this, "Failed to load image", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun performGodsDraw() {
+        setLoading(true)
+        executor.execute {
+            try {
+                // 1. Fetch random image URL
+                val request = Request.Builder()
+                    .url("https://api.tcslw.cn/api/img/tbmjx?type=json")
+                    .build()
+
+                val response = client.newCall(request).execute()
+                val jsonStr = response.body?.string()
+
+                if (jsonStr != null) {
+                    val json = JSONObject(jsonStr)
+                    val imageUrl = json.optString("image_url")
+
+                    if (imageUrl.isNotEmpty()) {
+                        // 2. Download Image
+                        val imgRequest = Request.Builder().url(imageUrl).build()
+                        val imgResponse = client.newCall(imgRequest).execute()
+                        val inputStream = imgResponse.body?.byteStream()
+                        val bitmap = BitmapFactory.decodeStream(inputStream)
+
+                        mainHandler.post {
+                            if (bitmap != null) {
+                                selectedImageBitmap = bitmap
+                                ivCardArt.setImageBitmap(bitmap)
+                                statusText.text = "God's Draw Image Fetched!"
+                                btnGenerate.isEnabled = true
+                                generateCard() // Auto generate
+                            } else {
+                                setLoading(false)
+                                Toast.makeText(this@MainActivity, "Failed to decode image", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } else {
+                        mainHandler.post {
+                            setLoading(false)
+                            Toast.makeText(this@MainActivity, "No image URL found", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    mainHandler.post {
+                        setLoading(false)
+                        Toast.makeText(this@MainActivity, "Empty response", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                mainHandler.post {
+                    setLoading(false)
+                    Toast.makeText(this@MainActivity, "God's Draw Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -162,10 +286,13 @@ class MainActivity : AppCompatActivity() {
                 // 1. Analyze Image
                 val cardData = vlmService.analyzeImage(selectedImageBitmap!!, apiKey!!, apiUrl!!, model!!, customPrompt!!)
 
+                // 2. Save Card (on BG thread)
+                saveCardToLibrary(cardData, selectedImageBitmap!!)
+
                 mainHandler.post {
                     setLoading(false)
                     renderCardNative(cardData)
-                    statusText.text = "Card Generated!"
+                    statusText.text = "Card Generated & Saved!"
                 }
 
             } catch (e: Exception) {
@@ -179,7 +306,147 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun saveCardToLibrary(data: VLMService.CardData, bitmap: Bitmap) {
+        try {
+            val filename = "card_${System.currentTimeMillis()}.png"
+            val file = File(filesDir, filename)
+            val out = FileOutputStream(file)
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            out.flush()
+            out.close()
+
+            val savedCard = SavedCard(
+                data.name, data.rarity, data.description, data.atk, data.def,
+                file.absolutePath, System.currentTimeMillis()
+            )
+
+            val prefs = getSharedPreferences("card_library", Context.MODE_PRIVATE)
+            val json = prefs.getString("history", "[]")
+            val type = object : TypeToken<ArrayList<SavedCard>>() {}.type
+            val list: ArrayList<SavedCard> = gson.fromJson(json, type) ?: ArrayList()
+
+            list.add(0, savedCard) // Add to top
+
+            prefs.edit().putString("history", gson.toJson(list)).apply()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun showLibrary() {
+        libraryList.removeAllViews()
+        val prefs = getSharedPreferences("card_library", Context.MODE_PRIVATE)
+        val json = prefs.getString("history", "[]")
+        val type = object : TypeToken<ArrayList<SavedCard>>() {}.type
+        val list: ArrayList<SavedCard> = gson.fromJson(json, type) ?: ArrayList()
+
+        if (list.isEmpty()) {
+            val emptyView = TextView(this)
+            emptyView.text = "No cards saved yet."
+            emptyView.setTextColor(Color.WHITE)
+            libraryList.addView(emptyView)
+        } else {
+            for (card in list) {
+                val itemView = TextView(this)
+                itemView.text = "${card.name} [${card.rarity}]"
+                itemView.setTextColor(Color.WHITE)
+                itemView.textSize = 18f
+                itemView.setPadding(0, 16, 0, 16)
+                itemView.setOnClickListener {
+                    loadCardFromLibrary(card)
+                }
+                libraryList.addView(itemView)
+
+                val divider = View(this)
+                divider.layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1)
+                divider.setBackgroundColor(Color.GRAY)
+                libraryList.addView(divider)
+            }
+        }
+        libraryContainer.visibility = View.VISIBLE
+    }
+
+    private fun loadCardFromLibrary(card: SavedCard) {
+        // Load image
+        val imgFile = File(card.imagePath)
+        if (imgFile.exists()) {
+            selectedImageBitmap = BitmapFactory.decodeFile(imgFile.absolutePath)
+            ivCardArt.setImageBitmap(selectedImageBitmap)
+        }
+
+        // Reconstruct CardData
+        val data = VLMService.CardData(card.rarity, card.name, card.description, card.atk, card.def)
+        renderCardNative(data)
+
+        libraryContainer.visibility = View.GONE
+
+        // Ensure front is shown
+        if (isFlipped) {
+            cardBack.visibility = View.GONE
+            cardContainer.visibility = View.VISIBLE
+            isFlipped = false
+            cardFlipContainer.rotationY = 0f
+        }
+    }
+
+    private fun flipCard() {
+        val scale = resources.displayMetrics.density
+        val cameraDist = 8000 * scale
+        cardFlipContainer.cameraDistance = cameraDist
+
+        val start = if (isFlipped) 180f else 0f
+        val end = if (isFlipped) 0f else 180f
+
+        // Disable interaction during animation
+        cardFlipContainer.isClickable = false
+
+        val animator = ObjectAnimator.ofFloat(cardFlipContainer, "rotationY", start, end)
+        animator.duration = 600
+        animator.interpolator = AccelerateDecelerateInterpolator()
+
+        animator.addUpdateListener { animation ->
+            val value = animation.animatedValue as Float
+            // We want to swap visibility exactly at 90 degrees
+            // When going 0 -> 180, swap at 90.
+            // When going 180 -> 0, swap at 90.
+
+            if (value >= 90f) {
+                // Should show Back
+                if (cardContainer.visibility == View.VISIBLE) {
+                     cardContainer.visibility = View.GONE
+                     cardBack.visibility = View.VISIBLE
+                     cardBack.scaleX = -1f // Fix mirroring
+                }
+            } else {
+                // Should show Front
+                if (cardBack.visibility == View.VISIBLE) {
+                    cardBack.visibility = View.GONE
+                    cardContainer.visibility = View.VISIBLE
+                }
+            }
+        }
+
+        animator.addListener(object : android.animation.AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: android.animation.Animator) {
+                isFlipped = !isFlipped
+                cardFlipContainer.isClickable = true
+            }
+        })
+
+        animator.start()
+    }
+
+    private var currentBreathingAnimX: ObjectAnimator? = null
+    private var currentBreathingAnimY: ObjectAnimator? = null
+
     private fun renderCardNative(data: VLMService.CardData) {
+        // Cancel any existing breathing animations
+        currentBreathingAnimX?.cancel()
+        currentBreathingAnimY?.cancel()
+        cardContainer.scaleX = 1f
+        cardContainer.scaleY = 1f
+
         // Set Text
         tvCardName.text = data.name
         tvCardDesc.text = data.description
@@ -240,6 +507,17 @@ class MainActivity : AppCompatActivity() {
                  intArrayOf(Color.TRANSPARENT, Color.parseColor("#40FFFFFF"), Color.TRANSPARENT)
              )
              viewEffectOverlay.background = shine
+
+             // Add a subtle breathing animation for High Rarity
+             currentBreathingAnimX = ObjectAnimator.ofFloat(cardContainer, "scaleX", 1f, 1.02f, 1f)
+             currentBreathingAnimX?.duration = 2000
+             currentBreathingAnimX?.repeatCount = ObjectAnimator.INFINITE
+             currentBreathingAnimX?.start()
+
+             currentBreathingAnimY = ObjectAnimator.ofFloat(cardContainer, "scaleY", 1f, 1.02f, 1f)
+             currentBreathingAnimY?.duration = 2000
+             currentBreathingAnimY?.repeatCount = ObjectAnimator.INFINITE
+             currentBreathingAnimY?.start()
         }
     }
 
@@ -252,11 +530,13 @@ class MainActivity : AppCompatActivity() {
             progressBar.visibility = View.VISIBLE
             btnGenerate.isEnabled = false
             btnPickImage.isEnabled = false
+            btnGodsDraw.isEnabled = false
             statusText.text = getString(R.string.analyzing)
         } else {
             progressBar.visibility = View.GONE
             btnGenerate.isEnabled = true
             btnPickImage.isEnabled = true
+            btnGodsDraw.isEnabled = true
         }
     }
 
