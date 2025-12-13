@@ -3,6 +3,10 @@ package com.cardgen.app
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.os.Bundle
 import android.widget.Button
@@ -12,6 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import java.io.File
+import java.io.FileOutputStream
 import java.util.concurrent.Executors
 
 class MainActivity : AppCompatActivity() {
@@ -107,19 +112,23 @@ class MainActivity : AppCompatActivity() {
 
         executor.execute {
             try {
-                val bytes = file.readBytes()
+                // Correct orientation first
+                val correctedFile = correctImageOrientation(file)
+
+                val bytes = correctedFile.readBytes()
                 val md5 = CardRepository.calculateMD5(bytes)
 
                 // Move/Save to internal storage for persistence
                 val filename = "pack_img_${md5}.jpg"
                 val finalFile = File(filesDir, filename)
                 if (!finalFile.exists()) {
-                     file.copyTo(finalFile, overwrite = true)
+                     correctedFile.copyTo(finalFile, overwrite = true)
                 }
 
                 // Cleanup temp file
                 try {
                     file.delete()
+                    if (correctedFile != file) correctedFile.delete()
                 } catch (e: Exception) { /* ignore */ }
 
                 val items = listOf(PackRepository.PackItem(finalFile.absolutePath, md5))
@@ -142,6 +151,45 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this, "Error processing image", Toast.LENGTH_SHORT).show()
                 }
             }
+        }
+    }
+
+    private fun correctImageOrientation(file: File): File {
+        try {
+            val exif = ExifInterface(file.absolutePath)
+            val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+
+            val rotationInDegrees = when (orientation) {
+                ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                else -> 0
+            }
+
+            if (rotationInDegrees == 0) return file
+
+            val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return file
+            val matrix = Matrix()
+            matrix.preRotate(rotationInDegrees.toFloat())
+
+            val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+
+            // Save to a new temp file or overwrite?
+            // Let's create a new one to be safe
+            val newFile = File(cacheDir, "rotated_${System.currentTimeMillis()}.jpg")
+            val out = FileOutputStream(newFile)
+            rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+            out.flush()
+            out.close()
+
+            bitmap.recycle()
+            if (rotatedBitmap != bitmap) rotatedBitmap.recycle()
+
+            return newFile
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return file
         }
     }
 }
