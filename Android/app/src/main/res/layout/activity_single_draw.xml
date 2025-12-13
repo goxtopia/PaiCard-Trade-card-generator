@@ -101,7 +101,7 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:orientation="horizontal"
-                            android:background="#E6FFFFFF"
+                            android:background="@drawable/bg_header_rounded"
                             android:padding="4dp"
                             app:layout_constraintTop_toTopOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
@@ -146,11 +146,12 @@
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintBottom_toTopOf="@id/infoContainer">
 
-                            <ImageView
+                            <com.google.android.material.image.ShapeableImageView
                                 android:id="@+id/ivCardArt"
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
-                                android:scaleType="fitCenter"
+                                android:scaleType="centerCrop"
+                                app:shapeAppearanceOverlay="@style/RoundedCornerImage"
                                 android:src="@android:drawable/ic_menu_gallery" />
 
                             <!-- Rarity Effect Overlay Placeholder -->

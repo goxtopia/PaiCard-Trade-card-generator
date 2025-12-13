@@ -103,7 +103,9 @@ class BatchDrawActivity : AppCompatActivity() {
     }
 
     private fun refreshPacks() {
-        packs = PackRepository.getPacks().sortedByDescending { it.createdAt }
+        packs = PackRepository.getPacks()
+            .filter { it.status != PackRepository.PackStatus.OPENED }
+            .sortedByDescending { it.createdAt }
         adapter.updateList(packs)
     }
 
