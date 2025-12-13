@@ -4,7 +4,11 @@ import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.graphics.drawable.GradientDrawable
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,7 +21,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.cardview.widget.CardView
 import androidx.core.content.ContextCompat
-import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -141,7 +145,7 @@ class PackOpeningActivity : AppCompatActivity() {
         adapter = PackGridAdapter(packItems) { item, holder ->
              flipCard(item, holder)
         }
-        recyclerView.layoutManager = GridLayoutManager(this, 2)
+        recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
     }
 
@@ -162,12 +166,61 @@ class PackOpeningActivity : AppCompatActivity() {
                      holder.cardBack.visibility = View.GONE
                      holder.cardFront.visibility = View.VISIBLE
                      holder.cardFront.scaleX = -1f
+
+                     // Trigger effects on reveal
+                     val cardData = CardRepository.getCard(item.md5)
+                     if (cardData != null) {
+                         triggerVibration(cardData.rarity)
+                         showParticles(holder, cardData.rarity)
+                     }
                  }
             }
         }
 
         animator.start()
         holder.isFlipped = true
+    }
+
+    private fun triggerVibration(rarity: String) {
+        val r = rarity.uppercase()
+        val duration = when {
+            r.contains("UR") -> 500L
+            r.contains("SSR") -> 300L
+            r.contains("SR") -> 150L
+            else -> 50L
+        }
+
+        val amplitude = when {
+            r.contains("UR") -> 255
+            r.contains("SSR") -> 200
+            r.contains("SR") -> 150
+            else -> 80
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            val vibrator = vibratorManager.defaultVibrator
+            vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude))
+        } else {
+            val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude))
+            } else {
+                vibrator.vibrate(duration)
+            }
+        }
+    }
+
+    private fun showParticles(holder: PackGridAdapter.ViewHolder, rarity: String) {
+        holder.particleView.visibility = View.VISIBLE
+        val r = rarity.uppercase()
+        when {
+            r.contains("UR") -> holder.particleView.setConfig(ParticleView.ParticleType.COSMIC)
+            r.contains("SSR") -> holder.particleView.setConfig(ParticleView.ParticleType.FLAME)
+            r.contains("SR") -> holder.particleView.setConfig(ParticleView.ParticleType.LIGHTNING)
+            r.contains("R") -> holder.particleView.setConfig(ParticleView.ParticleType.SPARKLE)
+            else -> holder.particleView.setConfig(ParticleView.ParticleType.DUST)
+        }
     }
 
     // Adapter
@@ -181,6 +234,7 @@ class PackOpeningActivity : AppCompatActivity() {
             val cardFlipContainer: FrameLayout = view.findViewById(R.id.cardFlipContainer)
             val cardBack: ImageView = view.findViewById(R.id.cardBack)
             val cardFront: CardView = view.findViewById(R.id.cardFront)
+            val particleView: ParticleView = view.findViewById(R.id.particleView)
 
             val ivArt: ImageView = view.findViewById(R.id.ivCardArt)
             val tvName: TextView = view.findViewById(R.id.tvCardName)
