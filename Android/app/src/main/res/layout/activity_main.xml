@@ -17,6 +17,16 @@
         android:layout_marginBottom="48dp"/>
 
     <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSnap"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:text="Snap &amp; Analyze"
+        app:icon="@android:drawable/ic_menu_camera"
+        app:iconGravity="textStart"
+        android:layout_marginBottom="16dp"
+        style="@style/Widget.Material3.Button.TonalButton"/>
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSingleDraw"
         android:layout_width="match_parent"
         android:layout_height="64dp"
