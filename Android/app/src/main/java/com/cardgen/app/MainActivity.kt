@@ -69,6 +69,11 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        executor.shutdown()
+    }
+
     private fun checkCameraPermissionAndSnap() {
         when {
             ContextCompat.checkSelfPermission(
