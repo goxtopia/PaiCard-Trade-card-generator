@@ -28,6 +28,10 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".SingleDrawActivity" />
+        <activity android:name=".GodsDrawActivity" />
+        <activity android:name=".BatchDrawActivity" />
+        <activity android:name=".LibraryActivity" />
         <activity android:name=".SettingsActivity" />
 
     </application>

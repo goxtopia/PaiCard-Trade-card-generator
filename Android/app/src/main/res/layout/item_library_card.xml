@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="4dp"
+    android:gravity="center">
+
+    <ImageView
+        android:id="@+id/itemImg"
+        android:layout_width="100dp"
+        android:layout_height="140dp"
+        android:scaleType="centerCrop"
+        android:background="#333333"/>
+
+    <TextView
+        android:id="@+id/itemName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Card Name"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:maxLines="1"
+        android:gravity="center"
+        android:ellipsize="end"/>
+
+    <TextView
+        android:id="@+id/itemRarity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="SSR"
+        android:textColor="#FFD700"
+        android:textSize="10sp"
+        android:gravity="center"/>
+
+</LinearLayout>
