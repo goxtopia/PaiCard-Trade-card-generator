@@ -58,6 +58,8 @@ class GodsDrawActivity : AppCompatActivity() {
         supportActionBar?.title = "God's Draw"
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
+        CardRepository.init(this) // Init repository
+
         btnSummon = findViewById(R.id.btnSummon)
         statusText = findViewById(R.id.statusText)
         recyclerView = findViewById(R.id.recyclerView)
@@ -194,16 +196,28 @@ class GodsDrawActivity : AppCompatActivity() {
 
         executor.execute {
             try {
-                val prefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
-                val apiKey = prefs.getString("api_key", "")
-                val apiUrl = prefs.getString("api_url", "https://api.openai.com")
-                val model = prefs.getString("model", "gpt-4o-mini")
-                val customPrompt = prefs.getString("custom_prompt", "Create a funny and creative name and ability description.")
+                // 0. Check Cache
+                val md5 = CardRepository.calculateMD5(item.bitmap!!)
+                var data = CardRepository.getCard(md5)
+                var fromCache = false
 
-                if (apiKey.isNullOrEmpty()) throw Exception("No API Key")
+                if (data != null) {
+                    fromCache = true
+                } else {
+                    val prefs = getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+                    val apiKey = prefs.getString("api_key", "")
+                    val apiUrl = prefs.getString("api_url", "https://api.openai.com")
+                    val model = prefs.getString("model", "gpt-4o-mini")
+                    val customPrompt = prefs.getString("custom_prompt", "Create a funny and creative name and ability description.")
 
-                val data = vlmService.analyzeImage(item.bitmap!!, apiKey!!, apiUrl!!, model!!, customPrompt!!)
-                saveCardToLibrary(data, item.bitmap!!)
+                    if (apiKey.isNullOrEmpty()) throw Exception("No API Key")
+
+                    data = vlmService.analyzeImage(item.bitmap!!, apiKey!!, apiUrl!!, model!!, customPrompt!!)
+                    CardRepository.saveCard(this, md5, data)
+                }
+
+                // Save history entry (even if cached, we record the "draw")
+                saveCardToLibrary(data!!, item.bitmap!!)
 
                 mainHandler.post {
                     item.cardData = data
@@ -211,6 +225,7 @@ class GodsDrawActivity : AppCompatActivity() {
                     adapter.notifyItemChanged(position) // Update UI with text
                 }
             } catch (e: Exception) {
+                e.printStackTrace()
                 mainHandler.post {
                     item.isLoading = false
                     // item.error = e.message
