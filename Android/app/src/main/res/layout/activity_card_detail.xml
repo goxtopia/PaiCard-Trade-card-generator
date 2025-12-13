@@ -30,7 +30,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:background="#E6FFFFFF"
+                android:background="@drawable/bg_header_rounded"
                 android:padding="6dp"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -60,17 +60,25 @@
             </LinearLayout>
 
             <!-- Art -->
-            <ImageView
-                android:id="@+id/ivCardArt"
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardArtContainer"
                 android:layout_width="0dp"
                 android:layout_height="0dp"
-                android:scaleType="fitCenter"
-                android:background="#000000"
+                app:cardCornerRadius="6dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#000000"
                 app:layout_constraintDimensionRatio="1:1"
                 app:layout_constraintTop_toBottomOf="@id/headerContainer"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
-                android:layout_marginTop="8dp"/>
+                android:layout_marginTop="8dp">
+
+                <ImageView
+                    android:id="@+id/ivCardArt"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"/>
+            </androidx.cardview.widget.CardView>
 
             <!-- Info -->
             <LinearLayout

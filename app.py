@@ -151,9 +151,16 @@ def process_single_file_generation(file_path, file_md5, card_back, existing_card
     # Load custom prompts
     settings = load_settings()
     custom_prompts = settings.get("prompts", None)
+    single_call_mode = settings.get("single_call_mode", False)
+    single_call_prompt = settings.get("single_call_prompt", "")
 
     # Analyze
-    analysis = vlm_service.analyze_image(file_path, custom_prompts=custom_prompts)
+    analysis = vlm_service.analyze_image(
+        file_path,
+        custom_prompts=custom_prompts,
+        single_call_mode=single_call_mode,
+        single_call_prompt=single_call_prompt
+    )
 
     filename = os.path.basename(file_path)
 

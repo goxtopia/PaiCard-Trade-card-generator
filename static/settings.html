@@ -60,13 +60,31 @@
         <h1 class="app-title">Settings</h1>
 
         <div class="settings-form">
-            <h3>Custom Prompts</h3>
-            <p style="margin-bottom: 20px; color: #bdc3c7;">Customize the prompts sent to the VLM model. Leave blank to use defaults.</p>
-
-            <div class="form-group">
-                <label for="promptRarity">Rarity Prompt</label>
-                <textarea id="promptRarity" placeholder="Analyze this image and determine its rarity..."></textarea>
+            <h3>Generation Mode</h3>
+            <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-bottom: 30px;">
+                <input type="checkbox" id="singleCallMode" style="width: 20px; height: 20px;">
+                <label for="singleCallMode" style="margin: 0; cursor: pointer;">Enable Single API Call Mode (Faster, uses one prompt)</label>
             </div>
+
+            <div id="singleCallSection" style="display: none; border-top: 1px solid #444; padding-top: 20px; margin-bottom: 20px;">
+                <h3>Single Call Settings</h3>
+                <div class="form-group">
+                    <label for="promptSingle">Single Call Instructions</label>
+                    <p style="font-size: 0.9em; color: #95a5a6; margin-bottom: 5px;">
+                        The model will be instructed to return JSON. Add your style instructions here.
+                    </p>
+                    <textarea id="promptSingle" placeholder="Create a funny and creative name and ability description..."></textarea>
+                </div>
+            </div>
+
+            <div id="multiCallSection">
+                <h3>Multi-Call Custom Prompts</h3>
+                <p style="margin-bottom: 20px; color: #bdc3c7;">Customize the prompts sent to the VLM model for each field. Leave blank to use defaults.</p>
+
+                <div class="form-group">
+                    <label for="promptRarity">Rarity Prompt</label>
+                    <textarea id="promptRarity" placeholder="Analyze this image and determine its rarity..."></textarea>
+                </div>
 
             <div class="form-group">
                 <label for="promptName">Name Prompt</label>
@@ -87,6 +105,7 @@
                 <label for="promptDef">DEF Prompt</label>
                 <textarea id="promptDef" placeholder="Determine a DEF value..."></textarea>
             </div>
+            </div> <!-- End MultiCallSection -->
 
             <div class="actions">
                 <button id="resetBtn" class="btn secondary-btn">Reset Defaults</button>
