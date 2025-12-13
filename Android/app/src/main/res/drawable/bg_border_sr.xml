@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Outer Glow (Soft) -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <stroke android:width="8dp" android:color="#4000BFFF" /> <!-- DeepSkyBlue low alpha -->
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+    <!-- Middle Glow -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <stroke android:width="5dp" android:color="#8000BFFF" /> <!-- DeepSkyBlue med alpha -->
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+    <!-- Inner/Sharp Border -->
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="12dp" />
+            <stroke android:width="2dp" android:color="#FF00BFFF" /> <!-- DeepSkyBlue solid -->
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+</layer-list>

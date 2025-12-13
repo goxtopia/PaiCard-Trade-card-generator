@@ -253,26 +253,21 @@ class LibraryActivity : AppCompatActivity() {
             holder.name.text = item.name
             holder.rarity.text = item.rarity
 
-            // Apply Rarity Colors to Border and Badge
+            // Apply Rarity Borders (Glows) and Badge Colors
+            val r = item.rarity.uppercase()
+            val borderRes = when {
+                r.contains("UR") -> R.drawable.bg_border_ur
+                r.contains("SSR") -> R.drawable.bg_border_ssr
+                r.contains("SR") -> R.drawable.bg_border_sr
+                else -> R.drawable.bg_border_n
+            }
+            holder.border.setBackgroundResource(borderRes)
+
+            // Badge Color (Simple tint matching rarity)
             val colorRes = getRarityColorRes(item.rarity)
             val colorInt = ContextCompat.getColor(holder.itemView.context, colorRes)
 
-            // Set border color
-            val borderDrawable = holder.border.background as? GradientDrawable
-            // Note: GradientDrawable might be wrapped or state list.
-            // In the XML it's a shape.
-            // We need to re-fetch or cast properly.
-            // If it fails, we reconstruct or set Tint.
-            // Safest for Shape drawable stroke modification:
-
-            // Approach 2: Use PorterDuff for simple tint on the stroke drawable if it's white
-            holder.border.background.mutate().setColorFilter(colorInt, PorterDuff.Mode.SRC_IN)
-
-            // Set Badge background color (semi-transparent version of rarity color)
             val badgeDrawable = holder.rarity.background.mutate() as GradientDrawable
-            badgeDrawable.setColor(colorInt) // Solid color for badge? Or semi-transparent?
-            // Let's make the badge solid color but slightly dark text or white text. Text is white in XML.
-            // Badge background in XML is #80000000 (semi trans black). Let's override it with rarity color.
             badgeDrawable.setColor(colorInt)
 
             holder.itemView.setOnClickListener {
